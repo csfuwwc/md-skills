@@ -32,6 +32,10 @@ def detect_platform(text):
     m = re.search(r'https?://www\.douyin\.com/video/\d+', text)
     if m:
         return 'douyin', m.group(0)
+    # 抖音精选/推荐页 modal_id 格式
+    m = re.search(r'https?://www\.douyin\.com/[^\s]*[?&]modal_id=(\d+)', text)
+    if m:
+        return 'douyin', f'https://www.douyin.com/video/{m.group(1)}'
     # 小红书完整链接
     m = re.search(r'https?://www\.xiaohongshu\.com/(?:discovery/item|explore)/[a-f0-9]+[^\s"\']*', text)
     if m:
