@@ -3,96 +3,123 @@ name: video-download
 description: Download videos from Douyin (抖音), Xiaohongshu (小红书), and Bilibili (B站) to local disk. Use when the user shares a video link from these platforms, asks to download a video, or mentions v.douyin.com / xiaohongshu.com / xhslink.com / bilibili.com / b23.tv URLs.
 ---
 
-# 抖音 / 小红书 / B站 视频下载
+# 国内视频平台下载
 
-从分享链接下载视频到本地，无头浏览器后台执行，用户不可见。
+从抖音、小红书、B站下载视频到本地，后台自动完成，无需手动操作。
 
-## 下载流程
+## 什么时候用
 
-**重要：下载 B站视频前，必须先检查登录状态（未登录只能获取 480p）。**
+- 用户发了抖音分享链接想保存视频
+- 想把小红书上看到的视频下载下来
+- 保存 B站视频到本地离线观看
+- 批量收藏视频素材
+- 备份自己发布的内容
 
-### 步骤 1：检查登录状态（B站必须）
+## 支持什么
 
-```bash
-python3 ~/.cursor/skills/video-download/scripts/download.py check-login bilibili
+| 平台 | 链接格式 | 画质 |
+|------|---------|------|
+| 抖音 | `v.douyin.com` 短链、完整视频链接、精选页链接 | 原画 |
+| 小红书 | `xiaohongshu.com` 笔记链接、`xhslink.com` 短链 | 原画 |
+| B站 | `bilibili.com/video/BVxxx`、`b23.tv` 短链 | 登录后 1080p，未登录 480p |
+
+## 怎么用
+
+### 基本下载
+
+```text
+下载这个视频: https://v.douyin.com/xxxxx
 ```
 
-- 退出码 `0`（输出 `LOGIN_OK`）→ 直接跳到步骤 3 下载
-- 退出码 `2`（输出 `LOGIN_REQUIRED`）→ 需要执行步骤 2 登录
-
-### 步骤 2：交互式登录（需要时）
-
-当 check-login 返回退出码 2 时，按以下流程操作：
-
-1. **后台启动登录浏览器**（设置 block_until_ms: 0）：
-
-```bash
-python3 ~/.cursor/skills/video-download/scripts/download.py login bilibili --signal-file /tmp/video_dl_login_done
+```text
+帮我下载 https://www.bilibili.com/video/BV1xxxxx
 ```
 
-2. **立即向用户展示确认按钮**，使用 AskQuestion 工具：
-   - 提示：「已打开 B站 登录页面，请在浏览器中完成登录，完成后点击下方确认按钮。」
-   - 选项 A：「已完成登录」
-   - 选项 B：「跳过登录（使用低画质）」
+### 小红书视频
 
-3. **用户点击确认后**：
-   - 选择 A：创建信号文件 `touch /tmp/video_dl_login_done`，等待登录脚本退出，然后继续下载
-   - 选择 B：终止登录脚本进程，直接下载（低画质）
-
-4. **兜底**：如果用户直接关闭了浏览器窗口，登录脚本会自动检测到并保存 cookie，无需信号文件。
-
-### 步骤 3：下载视频
-
-```bash
-python3 ~/.cursor/skills/video-download/scripts/download.py "<分享文本或链接>" [输出文件名.mp4]
+```text
+https://www.xiaohongshu.com/explore/xxxxx 下载
 ```
 
-## 平台支持
+### 指定文件名
 
-脚本自动识别平台：
-
-| 平台 | 支持的链接格式 | 需要登录 | 备注 |
-|------|---------------|---------|------|
-| 抖音 | `v.douyin.com/xxx` 短链、`www.douyin.com/video/xxx`、`modal_id=xxx` | 否 | 抓网络请求 |
-| 小红书 | `xiaohongshu.com/discovery/item/xxx`、`explore/xxx`、`xhslink.com/xxx` | 否 | 抓网络请求 |
-| B站 | `bilibili.com/video/BVxxx`、`b23.tv/xxx` 短链 | 推荐 | 解析 `__playinfo__`，需要 ffmpeg |
-
-- 输出文件名可选，默认从视频标题生成
-- 文件保存到 `~/Downloads/`
-- 依赖：`playwright`、`ffmpeg`（B站需要）
-
-## 登录管理
-
-```bash
-# 登录（打开可见浏览器）
-python3 ~/.cursor/skills/video-download/scripts/download.py login bilibili
-
-# 带信号文件的登录（Agent 交互模式用）
-python3 ~/.cursor/skills/video-download/scripts/download.py login bilibili --signal-file /tmp/video_dl_login_done
-
-# 检查登录状态
-python3 ~/.cursor/skills/video-download/scripts/download.py check-login bilibili
+```text
+下载这个视频，文件名叫 舞蹈教程.mp4: https://v.douyin.com/xxxxx
 ```
 
-Cookie 保存在 `~/.config/video-download/<平台>_cookies.json`，自动检测过期。
+## 示例
 
-支持的平台: `bilibili` / `douyin` / `xiaohongshu`
+**用户**: "https://www.bilibili.com/video/BV1ucFbzLEuG 下载"
 
-## 依赖安装
+**输出**:
 
-```bash
-pip3 install playwright && python3 -m playwright install chromium
-brew install ffmpeg   # B站视频合并需要
+```text
+[1/5] 解析B站链接...
+[2/5] BV号: BV1ucFbzLEuG, 启动无头浏览器...
+  已加载 bilibili 登录态 (28 cookies)
+[3/5] 视频: 1080x1438 avc1.640033
+       音频: mp4a.40.2
+[3/5] 下载视频流... 8.1MB
+[4/5] 下载音频流... 0.6MB
+[5/5] ffmpeg 合并音视频...
+
+✓ 下载完成: ~/Downloads/绿幕转写实.mp4 (8.7MB)
 ```
 
-## 故障排除
+## B站高清下载
 
-| 问题 | 解决方案 |
-|------|----------|
-| SSL 证书错误 | 脚本已内置 `ssl._create_unverified_context` |
-| 未捕获到视频地址 | 增加等待时间，或内容需要登录/是图文非视频 |
-| curl/下载 403 | 检查 Referer 头是否匹配平台域名 |
-| B站 ffmpeg 不存在 | `brew install ffmpeg` |
-| B站画质低 | 执行 `login bilibili` 登录后重新下载 |
-| CDN 地址过期 | 重新运行，URL 有几小时时效 |
-| cookie 过期 | 重新执行 login 命令 |
+B站未登录只能下载 480p。首次下载 B站视频时会自动引导登录：
+
+1. 弹出浏览器窗口，打开 B站登录页
+2. 你在浏览器里扫码或输密码登录
+3. 登录完成后点击会话中的确认按钮（或直接关闭浏览器）
+4. 自动保存登录态，后续下载直接使用，无需重复登录
+
+如果 cookie 过期，会自动提示重新登录。
+
+## 注意事项
+
+- 所有视频保存到 `~/Downloads/` 目录
+- 文件名自动从视频标题生成，也可以手动指定
+- 抖音和小红书无需登录即可下载原画质量
+- B站视频音频分离，下载后自动用 ffmpeg 合并
+- 整个过程在后台无头浏览器中执行，用户不可见
+
+## 常见问题
+
+| 问题 | 怎么办 |
+|------|--------|
+| B站画质只有 480p | 需要登录，说「登录B站」即可 |
+| 小红书下载失败 | 可能是图文笔记而非视频 |
+| 提示 ffmpeg 不存在 | 运行 `brew install ffmpeg` |
+| 视频地址过期 | 重新发链接下载即可 |
+| cookie 过期了 | 说「重新登录B站」即可 |
+
+---
+
+<!-- Agent 实现细节（用户不可见） -->
+<!-- 
+脚本路径: ~/.cursor/skills/video-download/scripts/download.py
+
+下载命令:
+  python3 ~/.cursor/skills/video-download/scripts/download.py "<链接>" [文件名.mp4]
+
+B站登录流程:
+  1. 检查: python3 ... check-login bilibili（退出码 2 = 需要登录）
+  2. 登录: python3 ... login bilibili --signal-file /tmp/video_dl_login_done（block_until_ms: 0 后台运行）
+  3. 弹按钮: AskQuestion「已完成登录」/「跳过登录（低画质）」
+  4. 确认后: touch /tmp/video_dl_login_done，等待登录脚本退出
+  5. 兜底: 用户关浏览器窗口也会自动保存 cookie
+  6. 继续下载
+
+手动登录:
+  python3 ... login bilibili
+  python3 ... login douyin
+  python3 ... login xiaohongshu
+
+Cookie 存储: ~/.config/video-download/<platform>_cookies.json
+
+依赖:
+  pip3 install playwright && python3 -m playwright install chromium
+  brew install ffmpeg
+-->
