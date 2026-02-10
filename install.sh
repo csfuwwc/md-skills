@@ -17,7 +17,7 @@ set -euo pipefail
 #     curl -fsSL https://raw.githubusercontent.com/<owner>/md-skills/main/install.sh | bash -s -- --list
 # ─────────────────────────────────────────────────────────
 
-REPO_OWNER="${MD_SKILLS_OWNER:-liyanpeng}"
+REPO_OWNER="${MD_SKILLS_OWNER:-csfuwwc}"
 REPO_NAME="${MD_SKILLS_REPO:-md-skills}"
 BRANCH="${MD_SKILLS_BRANCH:-main}"
 SKILLS_DIR="$HOME/.cursor/skills"

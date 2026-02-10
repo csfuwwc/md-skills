@@ -15,13 +15,13 @@ Cursor Agent Skills 合集 — 一键安装，即插即用。
 无需 clone 仓库，直接指定 skill 名称安装到 `~/.cursor/skills/`：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/liyanpeng/md-skills/main/install.sh | bash -s -- video-download
+curl -fsSL https://raw.githubusercontent.com/csfuwwc/md-skills/main/install.sh | bash -s -- video-download
 ```
 
 ### 方式二：本地安装
 
 ```bash
-git clone https://github.com/liyanpeng/md-skills.git
+git clone https://github.com/csfuwwc/md-skills.git
 cd md-skills
 ./install.sh video-download
 ```
@@ -30,7 +30,7 @@ cd md-skills
 
 ```bash
 # 远程
-curl -fsSL https://raw.githubusercontent.com/liyanpeng/md-skills/main/install.sh | bash -s -- --list
+curl -fsSL https://raw.githubusercontent.com/csfuwwc/md-skills/main/install.sh | bash -s -- --list
 
 # 本地
 ./install.sh --list
