@@ -398,14 +398,6 @@ def download_xiaohongshu(url, output_name=None):
 def download_bilibili(url, output_name=None):
     print(f"[1/5] 解析B站链接: {url}")
 
-    # 自动检测登录态，未登录时自动弹浏览器让用户登录
-    if check_login_required('bilibili'):
-        print("  未检测到B站登录态（未登录只能下载 480p）")
-        print("  正在打开登录页面，请在浏览器中完成登录后关闭窗口...")
-        print()
-        do_login('bilibili')
-        print()
-
     # 短链跳转
     if 'b23.tv' in url:
         url = resolve_redirect(url)
