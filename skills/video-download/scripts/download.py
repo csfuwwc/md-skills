@@ -36,11 +36,55 @@ def load_cookies(platform):
         try:
             with open(path, 'r') as f:
                 cookies = json.load(f)
+            # 检查关键 cookie 是否过期
+            if cookies_expired(platform, cookies):
+                print(f"  {platform} cookie 已过期")
+                return None
             print(f"  已加载 {platform} 登录态 ({len(cookies)} cookies)")
             return cookies
         except Exception:
             return None
     return None
+
+def cookies_expired(platform, cookies):
+    """检查平台关键 cookie 是否过期"""
+    import time
+    now = time.time()
+    # 各平台的关键 cookie 名
+    key_cookies = {
+        'bilibili': ['SESSDATA', 'bili_jct'],
+        'douyin': ['sessionid', 'sessionid_ss'],
+        'xiaohongshu': ['web_session'],
+    }
+    keys = key_cookies.get(platform, [])
+    if not keys:
+        return False
+    for c in cookies:
+        if c.get('name') in keys:
+            expires = c.get('expires', 0)
+            # expires=-1 表示会话 cookie（不过期）; expires>0 检查是否过期
+            if expires > 0 and expires < now:
+                return True
+            return False  # 找到关键 cookie 且未过期
+    return True  # 没找到关键 cookie，视为过期/未登录
+
+def check_login_required(platform):
+    """检查是否需要登录。返回 True 表示需要登录。
+    B站必须登录才能获取高清，其他平台可选。"""
+    # B站: 没有有效 cookie 时提示登录
+    if platform == 'bilibili':
+        path = get_cookie_path(platform)
+        if not os.path.exists(path):
+            return True
+        cookies = None
+        try:
+            with open(path, 'r') as f:
+                cookies = json.load(f)
+        except Exception:
+            return True
+        if cookies_expired(platform, cookies):
+            return True
+    return False
 
 def save_cookies(platform, cookies):
     """保存 cookie 到文件"""
@@ -50,9 +94,15 @@ def save_cookies(platform, cookies):
         json.dump(cookies, f, indent=2, ensure_ascii=False)
     print(f"  已保存 {len(cookies)} 个 cookie 到 {path}")
 
-def do_login(platform):
-    """打开可见浏览器让用户登录，完成后保存 cookie"""
+def do_login(platform, signal_file=None):
+    """打开可见浏览器让用户登录，完成后保存 cookie。
+    
+    signal_file: 如果指定，除了监听浏览器关闭外，也轮询此文件是否存在。
+                 文件出现时立即保存 cookie 并关闭浏览器。
+                 用于 Agent 交互式登录流程（用户点击确认按钮触发）。
+    """
     from playwright.sync_api import sync_playwright
+    import time
 
     login_urls = {
         'bilibili': 'https://passport.bilibili.com/login',
@@ -67,7 +117,10 @@ def do_login(platform):
 
     url = login_urls[platform]
     print(f"正在打开 {platform} 登录页面...")
-    print("请在浏览器中完成登录，登录成功后关闭浏览器窗口即可。")
+    if signal_file:
+        print("请在浏览器中完成登录，然后点击会话中的确认按钮，或关闭浏览器窗口。")
+    else:
+        print("请在浏览器中完成登录，登录成功后关闭浏览器窗口即可。")
     print()
 
     with sync_playwright() as p:
@@ -76,14 +129,41 @@ def do_login(platform):
         page = context.new_page()
         page.goto(url, wait_until='domcontentloaded', timeout=60000)
 
-        # 等待用户关闭浏览器
-        try:
-            page.wait_for_event('close', timeout=300000)  # 最多等 5 分钟
-        except Exception:
-            pass
+        if signal_file:
+            # 轮询模式: 检查 signal_file 或浏览器关闭
+            # 清理可能残留的信号文件
+            if os.path.exists(signal_file):
+                os.remove(signal_file)
+            
+            deadline = time.time() + 300  # 最多 5 分钟
+            while time.time() < deadline:
+                # 检查信号文件
+                if os.path.exists(signal_file):
+                    print("  收到确认信号，正在保存 cookie...")
+                    try:
+                        os.remove(signal_file)
+                    except OSError:
+                        pass
+                    break
+                # 检查浏览器是否被关闭
+                try:
+                    page.title()  # 如果页面已关闭会抛异常
+                except Exception:
+                    print("  检测到浏览器关闭，正在保存 cookie...")
+                    break
+                time.sleep(1)
+        else:
+            # 原始模式: 只等浏览器关闭
+            try:
+                page.wait_for_event('close', timeout=300000)
+            except Exception:
+                pass
 
         cookies = context.cookies()
-        browser.close()
+        try:
+            browser.close()
+        except Exception:
+            pass
 
     if cookies:
         save_cookies(platform, cookies)
@@ -429,19 +509,39 @@ def main():
     if len(sys.argv) < 2:
         print("用法:")
         print("  python3 download.py <分享链接或文本> [输出文件名]  # 下载视频")
-        print("  python3 download.py login <平台>                  # 登录保存cookie")
+        print("  python3 download.py login <平台> [--signal-file F] # 登录保存cookie")
+        print("  python3 download.py check-login <平台>             # 检查登录状态")
         print()
         print("支持平台: 抖音 / 小红书 / B站")
         print("登录平台: bilibili / douyin / xiaohongshu")
         sys.exit(1)
 
+    # check-login 子命令: 退出码 0=已登录, 2=需要登录
+    if sys.argv[1] == 'check-login':
+        if len(sys.argv) < 3:
+            print("用法: python3 download.py check-login <平台>")
+            sys.exit(1)
+        platform = sys.argv[2]
+        if check_login_required(platform):
+            print(f"LOGIN_REQUIRED:{platform}")
+            sys.exit(2)
+        else:
+            print(f"LOGIN_OK:{platform}")
+            sys.exit(0)
+
     # login 子命令
     if sys.argv[1] == 'login':
         if len(sys.argv) < 3:
-            print("用法: python3 download.py login <平台>")
+            print("用法: python3 download.py login <平台> [--signal-file <path>]")
             print("平台: bilibili / douyin / xiaohongshu")
             sys.exit(1)
-        do_login(sys.argv[2])
+        platform = sys.argv[2]
+        signal_file = None
+        if '--signal-file' in sys.argv:
+            idx = sys.argv.index('--signal-file')
+            if idx + 1 < len(sys.argv):
+                signal_file = sys.argv[idx + 1]
+        do_login(platform, signal_file=signal_file)
         return
 
     share_text = sys.argv[1]
