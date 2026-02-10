@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
 抖音 / 小红书 / B站 视频无头下载脚本
-用法: python3 download.py <分享链接或文本> [输出文件名]
+用法:
+  python3 download.py <分享链接或文本> [输出文件名]
+  python3 download.py login <平台>    # 登录并保存 cookie（bilibili/douyin/xiaohongshu）
 
 支持平台:
   - 抖音: v.douyin.com 短链 / www.douyin.com/video/xxx
@@ -19,6 +21,75 @@ import urllib.request
 ssl._create_default_https_context = ssl._create_unverified_context
 
 UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+COOKIE_DIR = os.path.expanduser('~/.config/video-download')
+
+# ── Cookie 管理 ─────────────────────────────────────────
+
+def get_cookie_path(platform):
+    """获取平台 cookie 文件路径"""
+    return os.path.join(COOKIE_DIR, f'{platform}_cookies.json')
+
+def load_cookies(platform):
+    """加载已保存的 cookie，返回 list 或 None"""
+    path = get_cookie_path(platform)
+    if os.path.exists(path):
+        try:
+            with open(path, 'r') as f:
+                cookies = json.load(f)
+            print(f"  已加载 {platform} 登录态 ({len(cookies)} cookies)")
+            return cookies
+        except Exception:
+            return None
+    return None
+
+def save_cookies(platform, cookies):
+    """保存 cookie 到文件"""
+    os.makedirs(COOKIE_DIR, exist_ok=True)
+    path = get_cookie_path(platform)
+    with open(path, 'w') as f:
+        json.dump(cookies, f, indent=2, ensure_ascii=False)
+    print(f"  已保存 {len(cookies)} 个 cookie 到 {path}")
+
+def do_login(platform):
+    """打开可见浏览器让用户登录，完成后保存 cookie"""
+    from playwright.sync_api import sync_playwright
+
+    login_urls = {
+        'bilibili': 'https://passport.bilibili.com/login',
+        'douyin': 'https://www.douyin.com/',
+        'xiaohongshu': 'https://www.xiaohongshu.com/',
+    }
+
+    if platform not in login_urls:
+        print(f"错误: 不支持的平台 '{platform}'")
+        print(f"支持: {', '.join(login_urls.keys())}")
+        sys.exit(1)
+
+    url = login_urls[platform]
+    print(f"正在打开 {platform} 登录页面...")
+    print("请在浏览器中完成登录，登录成功后关闭浏览器窗口即可。")
+    print()
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False)  # 可见浏览器
+        context = browser.new_context(user_agent=UA, viewport={'width': 1280, 'height': 800})
+        page = context.new_page()
+        page.goto(url, wait_until='domcontentloaded', timeout=60000)
+
+        # 等待用户关闭浏览器
+        try:
+            page.wait_for_event('close', timeout=300000)  # 最多等 5 分钟
+        except Exception:
+            pass
+
+        cookies = context.cookies()
+        browser.close()
+
+    if cookies:
+        save_cookies(platform, cookies)
+        print(f"\n{platform} 登录成功！后续下载将自动使用登录态。")
+    else:
+        print("\n未获取到 cookie，请确认已完成登录。")
 
 # ── 平台识别 ──────────────────────────────────────────────
 
@@ -90,7 +161,7 @@ def download_file(cdn_url, output_path, referer, extra_headers=None):
                 f.write(chunk)
     return os.path.getsize(output_path)
 
-def launch_browser_and_capture(page_url, video_filter_fn, wait_s=10, extra_wait_s=5):
+def launch_browser_and_capture(page_url, video_filter_fn, wait_s=10, extra_wait_s=5, platform=None):
     """
     无头浏览器访问页面，通过 video_filter_fn 过滤网络请求捕获视频 CDN URL。
     返回 (video_cdn_url, page_title)
@@ -98,10 +169,13 @@ def launch_browser_and_capture(page_url, video_filter_fn, wait_s=10, extra_wait_
     from playwright.sync_api import sync_playwright
 
     video_cdn_url = None
+    cookies = load_cookies(platform) if platform else None
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(user_agent=UA, viewport={'width': 1280, 'height': 720})
+        if cookies:
+            context.add_cookies(cookies)
         page = context.new_page()
 
         def on_response(response):
@@ -131,13 +205,16 @@ def launch_browser_and_capture(page_url, video_filter_fn, wait_s=10, extra_wait_
 
     return video_cdn_url, page_title
 
-def launch_browser_and_eval(page_url, js_code, wait_s=5):
+def launch_browser_and_eval(page_url, js_code, wait_s=5, platform=None):
     """无头浏览器访问页面并执行 JS，返回 (result, page_title)"""
     from playwright.sync_api import sync_playwright
+    cookies = load_cookies(platform) if platform else None
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(user_agent=UA, viewport={'width': 1280, 'height': 720})
+        if cookies:
+            context.add_cookies(cookies)
         page = context.new_page()
 
         try:
@@ -180,7 +257,7 @@ def download_douyin(url, output_name=None):
         u = resp.url
         return 'douyinvod.com' in u and 'video_mp4' in u
 
-    cdn_url, page_title = launch_browser_and_capture(page_url, is_douyin_video)
+    cdn_url, page_title = launch_browser_and_capture(page_url, is_douyin_video, platform='douyin')
 
     if not cdn_url:
         print("错误: 未能捕获到视频CDN地址")
@@ -219,7 +296,7 @@ def download_xiaohongshu(url, output_name=None):
             return True
         return False
 
-    cdn_url, page_title = launch_browser_and_capture(url, is_xhs_video)
+    cdn_url, page_title = launch_browser_and_capture(url, is_xhs_video, platform='xiaohongshu')
 
     if not cdn_url:
         print("错误: 未能捕获到视频CDN地址（可能是图文笔记而非视频）")
@@ -261,7 +338,7 @@ def download_bilibili(url, output_name=None):
         return JSON.stringify({ playinfo: info, title: title });
     }'''
 
-    result, page_title = launch_browser_and_eval(page_url, js_code)
+    result, page_title = launch_browser_and_eval(page_url, js_code, platform='bilibili')
 
     if not result:
         print("错误: 未找到 __playinfo__，可能是番剧/付费内容")
@@ -350,9 +427,22 @@ def download_bilibili(url, output_name=None):
 
 def main():
     if len(sys.argv) < 2:
-        print("用法: python3 download.py <分享链接或文本> [输出文件名]")
-        print("支持: 抖音 / 小红书 / B站")
+        print("用法:")
+        print("  python3 download.py <分享链接或文本> [输出文件名]  # 下载视频")
+        print("  python3 download.py login <平台>                  # 登录保存cookie")
+        print()
+        print("支持平台: 抖音 / 小红书 / B站")
+        print("登录平台: bilibili / douyin / xiaohongshu")
         sys.exit(1)
+
+    # login 子命令
+    if sys.argv[1] == 'login':
+        if len(sys.argv) < 3:
+            print("用法: python3 download.py login <平台>")
+            print("平台: bilibili / douyin / xiaohongshu")
+            sys.exit(1)
+        do_login(sys.argv[2])
+        return
 
     share_text = sys.argv[1]
     output_name = sys.argv[2] if len(sys.argv) > 2 else None
