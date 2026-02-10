@@ -9,43 +9,23 @@ description: Download videos from Douyin (抖音), Xiaohongshu (小红书), and 
 
 ## 下载流程
 
-**重要：下载 B站视频前，必须先检查登录状态（未登录只能获取 480p）。**
-
-### 步骤 1：检查登录状态（B站必须）
-
-```bash
-python3 ~/.cursor/skills/video-download/scripts/download.py check-login bilibili
-```
-
-- 退出码 `0`（输出 `LOGIN_OK`）→ 直接跳到步骤 3 下载
-- 退出码 `2`（输出 `LOGIN_REQUIRED`）→ 需要执行步骤 2 登录
-
-### 步骤 2：交互式登录（需要时）
-
-当 check-login 返回退出码 2 时，按以下流程操作：
-
-1. **后台启动登录浏览器**（设置 block_until_ms: 0）：
-
-```bash
-python3 ~/.cursor/skills/video-download/scripts/download.py login bilibili --signal-file /tmp/video_dl_login_done
-```
-
-2. **立即向用户展示确认按钮**，使用 AskQuestion 工具：
-   - 提示：「已打开 B站 登录页面，请在浏览器中完成登录，完成后点击下方确认按钮。」
-   - 选项 A：「已完成登录」
-   - 选项 B：「跳过登录（使用低画质）」
-
-3. **用户点击确认后**：
-   - 选择 A：创建信号文件 `touch /tmp/video_dl_login_done`，等待登录脚本退出，然后继续下载
-   - 选择 B：终止登录脚本进程，直接下载（低画质）
-
-4. **兜底**：如果用户直接关闭了浏览器窗口，登录脚本会自动检测到并保存 cookie，无需信号文件。
-
-### 步骤 3：下载视频
+直接运行下载命令即可。B站视频如果未登录，脚本会**自动弹出浏览器**让用户登录，登录后自动继续下载。
 
 ```bash
 python3 ~/.cursor/skills/video-download/scripts/download.py "<分享文本或链接>" [输出文件名.mp4]
 ```
+
+**注意**：B站下载命令可能会阻塞等待用户在浏览器中登录。使用 Shell 工具时建议设置较长的超时（block_until_ms: 300000）或后台运行。
+
+### Cursor 增强体验（可选）
+
+在 Cursor 中可以用 AskQuestion 提供更好的交互体验：
+
+1. 先检查登录状态：`python3 ... check-login bilibili`（退出码 2 = 需要登录）
+2. 如果需要登录，后台启动：`python3 ... login bilibili --signal-file /tmp/video_dl_login_done`（block_until_ms: 0）
+3. 用 AskQuestion 展示「已完成登录」/「跳过登录」按钮
+4. 用户点确认后：`touch /tmp/video_dl_login_done`，等待登录脚本退出
+5. 再执行下载命令
 
 ## 平台支持
 
