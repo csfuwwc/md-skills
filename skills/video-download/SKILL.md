@@ -1,11 +1,11 @@
 ---
 name: video-download
-description: Download videos from Douyin (抖音), Xiaohongshu (小红书), and Bilibili (B站) to local disk. Use when the user shares a video link from these platforms, asks to download a video, or mentions v.douyin.com / xiaohongshu.com / xhslink.com / bilibili.com / b23.tv URLs.
+description: Download videos from Douyin (抖音), Xiaohongshu (小红书), Bilibili (B站), YouTube, Twitter/X, Instagram, and 1700+ sites to local disk. Use when the user shares a video link, asks to download a video, or mentions v.douyin.com / xiaohongshu.com / xhslink.com / bilibili.com / b23.tv / youtube.com / youtu.be / x.com / twitter.com / instagram.com or any other video URL.
 ---
 
-# 抖音 / 小红书 / B站 视频下载
+# 视频下载（抖音 / 小红书 / B站 + YouTube / Twitter 等）
 
-从分享链接下载视频到本地，无头浏览器后台执行，用户不可见。
+从分享链接下载视频到本地。抖音/小红书/B站使用 Playwright 无头浏览器，其他站点使用 yt-dlp。
 
 ## 首次使用：一键安装依赖
 
@@ -67,17 +67,21 @@ python3 ~/.cursor/skills/video-download/scripts/download.py "<分享文本或链
 
 ## 平台支持
 
-脚本自动识别平台：
+脚本自动识别平台，优先使用 Playwright，其余 fallback 到 yt-dlp：
 
-| 平台 | 支持的链接格式 | 需要登录 | 备注 |
-|------|---------------|---------|------|
-| 抖音 | `v.douyin.com/xxx` 短链、`www.douyin.com/video/xxx`、`modal_id=xxx` | 否 | 抓网络请求 |
-| 小红书 | `xiaohongshu.com/discovery/item/xxx`、`explore/xxx`、`xhslink.com/xxx` | 否 | 抓网络请求 |
-| B站 | `bilibili.com/video/BVxxx`、`b23.tv/xxx` 短链 | 推荐 | 解析 `__playinfo__`，需要 ffmpeg |
+| 平台 | 支持的链接格式 | 引擎 | 需要登录 | 备注 |
+|------|---------------|------|---------|------|
+| 抖音 | `v.douyin.com/xxx` 短链、`www.douyin.com/video/xxx`、`modal_id=xxx` | Playwright | 否 | 抓网络请求 |
+| 小红书 | `xiaohongshu.com/discovery/item/xxx`、`explore/xxx`、`xhslink.com/xxx` | Playwright | 否 | 抓网络请求 |
+| B站 | `bilibili.com/video/BVxxx`、`b23.tv/xxx` 短链 | Playwright | 推荐 | 解析 `__playinfo__`，需要 ffmpeg |
+| YouTube | `youtube.com/watch?v=xxx`、`youtu.be/xxx` | yt-dlp | 否 | |
+| Twitter/X | `x.com/xxx/status/xxx`、`twitter.com/...` | yt-dlp | 否 | |
+| Instagram | `instagram.com/reel/xxx`、`instagram.com/p/xxx` | yt-dlp | 否 | 私密内容需登录 |
+| 其他 | 任意视频链接 | yt-dlp | 视站点 | 支持 1700+ 站点 |
 
 - 输出文件名可选，默认从视频标题生成
 - 文件保存到 `~/Downloads/`
-- 依赖：`playwright`、`ffmpeg`（B站需要）
+- 依赖：`playwright`（抖音/小红书/B站）、`yt-dlp`（其他站点）、`ffmpeg`
 
 ## 登录管理
 
@@ -121,6 +125,9 @@ python3 -m playwright install chromium
 
 # 4. 安装 ffmpeg（B站视频合并需要）
 brew install ffmpeg
+
+# 5. 安装 yt-dlp（YouTube/Twitter 等站点需要）
+brew install yt-dlp
 ```
 
 **临时使用镜像（不改配置）：**
@@ -142,3 +149,6 @@ python3 -m playwright install chromium
 | B站画质低 | 执行 `login bilibili` 登录后重新下载 |
 | CDN 地址过期 | 重新运行，URL 有几小时时效 |
 | cookie 过期 | 重新执行 login 命令 |
+| yt-dlp 未安装 | `brew install yt-dlp` 或 `pip3 install yt-dlp` |
+| yt-dlp 下载失败 | 先 `yt-dlp -U` 更新到最新版，站点可能更新了反爬 |
+| YouTube 地区限制 | 使用代理：`yt-dlp --proxy socks5://127.0.0.1:1080 URL` |

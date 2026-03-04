@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-抖音 / 小红书 / B站 视频无头下载脚本
+视频下载脚本 — 抖音/小红书/B站 (Playwright) + 通用站点 (yt-dlp)
+
 用法:
   python3 download.py <分享链接或文本> [输出文件名]
   python3 download.py login <平台>    # 登录并保存 cookie（bilibili/douyin/xiaohongshu）
 
 支持平台:
-  - 抖音: v.douyin.com 短链 / www.douyin.com/video/xxx
-  - 小红书: www.xiaohongshu.com/discovery/item/xxx / explore/xxx / xhslink.com 短链
-  - B站: www.bilibili.com/video/BVxxx / b23.tv 短链
+  - 抖音: v.douyin.com 短链 / www.douyin.com/video/xxx        [Playwright]
+  - 小红书: xiaohongshu.com/discovery/item/xxx / xhslink.com  [Playwright]
+  - B站: bilibili.com/video/BVxxx / b23.tv 短链               [Playwright]
+  - YouTube / Twitter / Instagram / 1700+ 站点                 [yt-dlp]
 """
 import sys
 import re
@@ -503,6 +505,60 @@ def download_bilibili(url, output_name=None):
     size = os.path.getsize(output_path) / 1048576
     print(f"下载完成: {output_path} ({size:.1f}MB)")
 
+# ── yt-dlp 通用下载（YouTube / Twitter / Instagram 等） ──
+
+def check_ytdlp():
+    """检查 yt-dlp 是否已安装"""
+    try:
+        subprocess.run(['yt-dlp', '--version'], capture_output=True, check=True)
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False
+
+def extract_url(text):
+    """从分享文本中提取 URL"""
+    m = re.search(r'https?://[^\s"\'<>\]]+', text)
+    return m.group(0).rstrip('.,;!?)') if m else text.strip()
+
+def download_ytdlp(url, output_name=None):
+    """使用 yt-dlp 下载视频（支持 YouTube / Twitter / Instagram 等 1700+ 站点）"""
+    if not check_ytdlp():
+        print("错误: 未安装 yt-dlp")
+        print("安装: brew install yt-dlp  或  pip3 install yt-dlp")
+        sys.exit(1)
+
+    url = extract_url(url)
+    out_dir = os.path.expanduser('~/Downloads')
+    print(f"[1/2] 使用 yt-dlp 下载: {url}")
+
+    cmd = [
+        'yt-dlp',
+        '-f', 'bv*+ba/b',           # 最佳视频+音频，fallback 到最佳单文件
+        '--merge-output-format', 'mp4',
+        '--no-playlist',             # 默认只下单个视频
+        '--no-warnings',
+        '--progress',
+        '--newline',                 # 进度条每行刷新，方便终端读取
+    ]
+
+    if output_name:
+        if not output_name.endswith('.mp4'):
+            output_name += '.mp4'
+        cmd += ['-o', os.path.join(out_dir, output_name)]
+    else:
+        cmd += ['-o', os.path.join(out_dir, '%(title).80s.%(ext)s')]
+
+    cmd.append(url)
+
+    print(f"[2/2] 开始下载...")
+    result = subprocess.run(cmd, text=True)
+
+    if result.returncode != 0:
+        print(f"yt-dlp 下载失败 (exit {result.returncode})")
+        sys.exit(1)
+
+    print("下载完成，文件保存在 ~/Downloads/")
+
 # ── 入口 ──────────────────────────────────────────────────
 
 def main():
@@ -512,7 +568,8 @@ def main():
         print("  python3 download.py login <平台> [--signal-file F] # 登录保存cookie")
         print("  python3 download.py check-login <平台>             # 检查登录状态")
         print()
-        print("支持平台: 抖音 / 小红书 / B站")
+        print("支持平台: 抖音 / 小红书 / B站 (Playwright)")
+        print("         YouTube / Twitter / Instagram 等 (yt-dlp)")
         print("登录平台: bilibili / douyin / xiaohongshu")
         sys.exit(1)
 
@@ -556,9 +613,8 @@ def main():
     elif platform == 'bilibili':
         download_bilibili(url, output_name)
     else:
-        print(f"错误: 无法识别平台")
-        print(f"支持: 抖音(v.douyin.com) / 小红书(xiaohongshu.com) / B站(bilibili.com)")
-        sys.exit(1)
+        # 非抖音/小红书/B站，尝试 yt-dlp 通用下载
+        download_ytdlp(share_text, output_name)
 
 if __name__ == '__main__':
     main()
