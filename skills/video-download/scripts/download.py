@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 视频下载脚本 — 抖音/小红书/B站 (Playwright) + 通用站点 (yt-dlp)
-
 用法:
   python3 download.py <分享链接或文本> [输出文件名]
   python3 download.py login <平台>    # 登录并保存 cookie（bilibili/douyin/xiaohongshu）
@@ -10,6 +9,7 @@
   - 抖音: v.douyin.com 短链 / www.douyin.com/video/xxx        [Playwright]
   - 小红书: xiaohongshu.com/discovery/item/xxx / xhslink.com  [Playwright]
   - B站: bilibili.com/video/BVxxx / b23.tv 短链               [Playwright]
+  - TikTok: tiktok.com/@user/video/xxx / vm.tiktok.com/xxx    [CDP 优先，失败回退 yt-dlp]
   - YouTube / Twitter / Instagram / 1700+ 站点                 [yt-dlp]
 """
 import sys
@@ -19,6 +19,10 @@ import ssl
 import json
 import subprocess
 import urllib.request
+import urllib.parse
+import shutil
+import tempfile
+from datetime import datetime
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -126,7 +130,12 @@ def do_login(platform, signal_file=None):
     print()
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)  # 可见浏览器
+        launch_kwargs = {'headless': False}
+        # Prefer environment override, otherwise let Playwright pick the local browser.
+        chrome_path = os.getenv('VIDEO_DOWNLOAD_CHROME_PATH')
+        if chrome_path:
+            launch_kwargs['executable_path'] = chrome_path
+        browser = p.chromium.launch(**launch_kwargs)  # 可见浏览器
         context = browser.new_context(user_agent=UA, viewport={'width': 1280, 'height': 800})
         page = context.new_page()
         page.goto(url, wait_until='domcontentloaded', timeout=60000)
@@ -205,6 +214,14 @@ def detect_platform(text):
     m = re.search(r'https?://b23\.tv/[A-Za-z0-9]+', text)
     if m:
         return 'bilibili', m.group(0)
+    # TikTok 完整链接
+    m = re.search(r'https?://(?:www\.)?tiktok\.com/@[^/\s]+/video/\d+[^\s"\']*', text)
+    if m:
+        return 'tiktok', m.group(0)
+    # TikTok 短链
+    m = re.search(r'https?://(?:vm|vt)\.tiktok\.com/[A-Za-z0-9/]+', text)
+    if m:
+        return 'tiktok', m.group(0)
     return None, None
 
 # ── 通用工具 ──────────────────────────────────────────────
@@ -225,6 +242,48 @@ def clean_filename(title, fallback='video'):
     if len(title.encode('utf-8')) > 200:
         title = title[:60]
     return title or fallback
+
+def get_media_duration_seconds(file_path):
+    """返回媒体总时长（秒，float）或 None。"""
+    result = subprocess.run(
+        ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+         '-of', 'default=nw=1:nk=1', file_path],
+        text=True, capture_output=True
+    )
+    if result.returncode != 0:
+        return None
+    try:
+        v = float((result.stdout or '').strip())
+        return v if v > 0 else None
+    except ValueError:
+        return None
+
+def write_tiktok_meta(output_path, source, target_video_id=None, resolved_video_id=None,
+                      expected_duration=None, actual_duration=None,
+                      validation=None, note=None):
+    """写出 TikTok 抓取元信息，便于批处理写表。"""
+    meta_path = f"{output_path}.meta.json"
+    payload = {
+        'platform': 'tiktok',
+        'source': source,  # cdp / tikwm / ytdlp
+        'target_video_id': target_video_id,
+        'resolved_video_id': resolved_video_id,
+        'expected_duration': expected_duration,
+        'actual_duration': actual_duration,
+        'validation': validation or {},
+        'note': note,
+        'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'output_path': output_path,
+    }
+    with open(meta_path, 'w', encoding='utf-8') as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    v = payload['validation']
+    print(
+        f"[TikTok/META] source={source} "
+        f"id_ok={v.get('id_ok')} duration_ok={v.get('duration_ok')} video_track_ok={v.get('video_track_ok')}"
+    )
+    print(f"[TikTok/META] {meta_path}")
+    return meta_path
 
 def download_file(cdn_url, output_path, referer, extra_headers=None):
     """下载文件到本地，支持大文件流式写入"""
@@ -458,8 +517,7 @@ def download_bilibili(url, output_name=None):
     print(f"       音频: {best_audio['codecs']}")
 
     # 下载视频流和音频流到临时目录
-    tmp_dir = '/tmp/bili_dl'
-    os.makedirs(tmp_dir, exist_ok=True)
+    tmp_dir = tempfile.mkdtemp(prefix='bili_dl_')
     video_path = os.path.join(tmp_dir, 'video.m4s')
     audio_path = os.path.join(tmp_dir, 'audio.m4s')
 
@@ -505,15 +563,404 @@ def download_bilibili(url, output_name=None):
     size = os.path.getsize(output_path) / 1048576
     print(f"下载完成: {output_path} ({size:.1f}MB)")
 
+# ── TikTok 下载（CDP 优先，失败回退 yt-dlp） ────────────────
+
+def download_tiktok_cdp(url, output_name=None):
+    """通过已登录的真实浏览器 CDP 抓取 TikTok 视频（活动 tab、先播放、强校验）。"""
+    from playwright.sync_api import sync_playwright
+    import math
+
+    m_expected = re.search(r'/video/(\d+)', url)
+    expected_vid = m_expected.group(1) if m_expected else None
+
+    cdp_endpoints = []
+    env_endpoint = os.environ.get('VIDEO_DOWNLOAD_TIKTOK_CDP_ENDPOINT', '').strip()
+    if env_endpoint:
+        cdp_endpoints.append(env_endpoint)
+    # 默认尝试 TikTok 专用端口，再尝试常见备用端口
+    cdp_endpoints.extend([
+        'http://127.0.0.1:9225',
+        'http://127.0.0.1:9222',
+    ])
+
+    if 'vm.tiktok.com' in url or 'vt.tiktok.com' in url:
+        try:
+            url = resolve_redirect(url)
+            print(f"  跳转到: {url}")
+            m_expected = re.search(r'/video/(\d+)', url)
+            expected_vid = m_expected.group(1) if m_expected else expected_vid
+        except Exception as e:
+            raise RuntimeError(f'解析 TikTok 短链失败: {e}')
+
+    if not output_name:
+        m = re.search(r'/video/(\d+)', url)
+        vid = m.group(1) if m else 'unknown'
+        output_name = f'tiktok_{vid}.mp4'
+    elif not output_name.endswith('.mp4'):
+        output_name += '.mp4'
+
+    output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+
+    last_err = None
+    for endpoint in cdp_endpoints:
+        try:
+            print(f"[TikTok/CDP] 尝试连接: {endpoint}")
+            with sync_playwright() as p:
+                browser = p.chromium.connect_over_cdp(endpoint)
+                if not browser.contexts:
+                    raise RuntimeError('CDP 未发现可用浏览器上下文')
+                ctx = browser.contexts[0]
+
+                # 优先复用活动 TikTok tab，避免批量时开太多 tab；找不到再新建
+                target_page = None
+                for pg in reversed(ctx.pages):
+                    if 'tiktok.com' in (pg.url or ''):
+                        target_page = pg
+                        break
+                created_new_page = False
+                if target_page is None:
+                    target_page = ctx.new_page()
+                    created_new_page = True
+
+                target_page.goto(url, wait_until='domcontentloaded', timeout=60000)
+
+                # 跳转后先做 URL 级校验，避免被重定向到别的帖子
+                current_url = target_page.url or ''
+                if expected_vid and f'/video/{expected_vid}' not in current_url:
+                    raise RuntimeError(
+                        f'页面URL不匹配目标视频: expected={expected_vid}, current={current_url}'
+                    )
+
+                # 从页面数据读取当前视频 ID 和时长；拿不到则视为不安全，不继续下载
+                target_page.wait_for_timeout(1500)
+                video_meta = target_page.evaluate("""() => {
+                  try {
+                    const s = window.__UNIVERSAL_DATA__?.__DEFAULT_SCOPE__;
+                    const node = s?.['webapp.video-detail']?.itemInfo?.itemStruct
+                      || s?.webapp_video_detail?.itemInfo?.itemStruct
+                      || {};
+                    const a = node?.id;
+                    const c = window.SIGI_STATE?.ItemModule
+                      ? Object.keys(window.SIGI_STATE.ItemModule)[0]
+                      : null;
+                    const fromPath = (() => {
+                      const m = (location.pathname || '').match(/\\/video\\/(\\d+)/);
+                      return m ? m[1] : '';
+                    })();
+                    const duration = Number(node?.video?.duration || 0) || null;
+                    return {
+                      vid: String(a || c || fromPath || ''),
+                      duration: duration
+                    };
+                  } catch (e) {
+                    return { vid: '', duration: null };
+                  }
+                }""")
+                actual_vid = str((video_meta or {}).get('vid') or '')
+                expected_duration = (video_meta or {}).get('duration')
+                # 兜底：若运行时对象拿不到时长，则从 rehydration HTML 中解析
+                if not expected_duration and expected_vid:
+                    try:
+                        html_text = target_page.content()
+                        m = re.search(
+                            r'<script[^>]*id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>(.*?)</script>',
+                            html_text, re.S
+                        )
+                        if m:
+                            data = json.loads(m.group(1))
+                            node = (
+                                data.get('__DEFAULT_SCOPE__', {})
+                                .get('webapp.video-detail', {})
+                                .get('itemInfo', {})
+                                .get('itemStruct', {})
+                            )
+                            if str(node.get('id') or '') == expected_vid:
+                                expected_duration = (
+                                    node.get('video', {}) or {}
+                                ).get('duration') or expected_duration
+                    except Exception:
+                        pass
+                if expected_vid and not actual_vid:
+                    raise RuntimeError('无法读取页面视频ID，已中止以避免串视频')
+                if expected_vid and actual_vid != expected_vid:
+                    raise RuntimeError(
+                        f'页面视频ID不匹配: expected={expected_vid}, actual={actual_vid}'
+                    )
+
+                # 监听响应并直接取 response.body()，避免 requestId 失效
+                hit = {'url': None, 'bytes': None}
+                def on_response(resp):
+                    if hit['bytes'] is not None:
+                        return
+                    try:
+                        status = resp.status
+                        if status != 200:
+                            return
+                        u = resp.url or ''
+                        ct = (resp.header_value('content-type') or '').lower()
+                        # 只接受视频流，不接受音频流
+                        if 'video/tos/' not in u:
+                            return
+                        if 'audio' in ct:
+                            return
+                        if 'video' not in ct and '.mp4' not in u:
+                            return
+                        body = resp.body()
+                        if not body:
+                            return
+                        hit['url'] = u
+                        hit['bytes'] = body
+                    except Exception:
+                        return
+                target_page.on('response', on_response)
+
+                target_page.bring_to_front()
+                # 尝试触发播放，促使真实媒体请求出现
+                try:
+                    target_page.mouse.click(640, 360)
+                except Exception:
+                    pass
+                try:
+                    target_page.keyboard.press('Space')
+                except Exception:
+                    pass
+                target_page.wait_for_timeout(12000)
+
+                # 未抓到时再刷新一次重试
+                if not hit['bytes']:
+                    target_page.reload(wait_until='domcontentloaded', timeout=60000)
+                    target_page.wait_for_timeout(2000)
+                    try:
+                        target_page.mouse.click(640, 360)
+                        target_page.keyboard.press('Space')
+                    except Exception:
+                        pass
+                    target_page.wait_for_timeout(10000)
+
+                raw_bytes = hit['bytes']
+                if not raw_bytes:
+                    raise RuntimeError('捕获到空响应体')
+
+                with open(output_path, 'wb') as f:
+                    f.write(raw_bytes)
+
+                # 强校验：必须存在视频轨；若能读到页面时长，则时长要接近
+                probe = subprocess.run(
+                    ['ffprobe', '-v', 'error',
+                     '-show_entries', 'stream=codec_type,duration',
+                     '-of', 'default=nw=1:nk=1', output_path],
+                    text=True, capture_output=True
+                )
+                if probe.returncode != 0:
+                    raise RuntimeError('ffprobe 校验失败')
+                lines = [x.strip() for x in (probe.stdout or '').splitlines() if x.strip()]
+                has_video = any(x == 'video' for x in lines)
+                if not has_video:
+                    raise RuntimeError('下载结果无视频轨，已中止')
+
+                actual_duration = get_media_duration_seconds(output_path)
+                duration_ok = None
+                if expected_duration:
+                    try:
+                        exp = float(expected_duration)
+                        got = float(actual_duration) if actual_duration else 0.0
+                        if got > 0 and exp > 0:
+                            duration_ok = math.fabs(got - exp) <= 3.0
+                            if not duration_ok:
+                                raise RuntimeError(
+                                    f'视频时长不匹配: expected~{exp}s, got={got:.2f}s'
+                                )
+                    except ValueError:
+                        duration_ok = None
+
+                # 只关闭本次脚本新开的页面，不干扰用户原有页面
+                if created_new_page:
+                    try:
+                        target_page.close()
+                    except Exception:
+                        pass
+
+                if expected_vid:
+                    print(f"[TikTok/CDP] 目标视频ID: {expected_vid}")
+                if actual_vid:
+                    print(f"[TikTok/CDP] 页面视频ID: {actual_vid}")
+                if expected_duration:
+                    print(f"[TikTok/CDP] 页面时长: {expected_duration}s")
+                print(f"[TikTok/CDP] 捕获成功: {hit['url']}")
+                print(f"下载完成: {output_path} ({len(raw_bytes) / 1048576:.1f}MB)")
+                write_tiktok_meta(
+                    output_path=output_path,
+                    source='cdp',
+                    target_video_id=expected_vid,
+                    resolved_video_id=actual_vid or expected_vid,
+                    expected_duration=expected_duration,
+                    actual_duration=actual_duration,
+                    validation={
+                        'id_ok': (actual_vid == expected_vid) if expected_vid else None,
+                        'duration_ok': duration_ok,
+                        'video_track_ok': has_video,
+                    },
+                    note='CDP direct stream capture',
+                )
+                return output_path
+        except Exception as e:
+            last_err = e
+            print(f"[TikTok/CDP] 失败: {e}")
+
+    raise RuntimeError(f"CDP 下载失败: {last_err}")
+
+def download_tiktok_tikwm(url, output_name=None):
+    """通过 tikwm API 兜底解析 TikTok 视频（用于 app-only / shop 场景）。"""
+    import math
+
+    m_expected = re.search(r'/video/(\d+)', url)
+    expected_vid = m_expected.group(1) if m_expected else None
+
+    if 'vm.tiktok.com' in url or 'vt.tiktok.com' in url:
+        try:
+            url = resolve_redirect(url)
+            print(f"  跳转到: {url}")
+            m_expected = re.search(r'/video/(\d+)', url)
+            expected_vid = m_expected.group(1) if m_expected else expected_vid
+        except Exception as e:
+            raise RuntimeError(f'解析 TikTok 短链失败: {e}')
+
+    api_url = 'https://www.tikwm.com/api/?url=' + urllib.parse.quote(url, safe='')
+    req = urllib.request.Request(api_url, headers={
+        'User-Agent': UA,
+        'Referer': 'https://www.tikwm.com/',
+        'Accept': 'application/json,text/plain,*/*',
+    })
+    try:
+        raw = urllib.request.urlopen(req, timeout=30).read().decode('utf-8', 'ignore')
+        data = json.loads(raw)
+    except Exception as e:
+        raise RuntimeError(f'tikwm API 请求失败: {e}')
+
+    if data.get('code') != 0:
+        raise RuntimeError(f"tikwm API 返回失败: code={data.get('code')} msg={data.get('msg')}")
+
+    node = data.get('data') or {}
+    got_vid = str(node.get('id') or '')
+    if expected_vid and got_vid and got_vid != expected_vid:
+        raise RuntimeError(f'tikwm 返回视频ID不匹配: expected={expected_vid}, got={got_vid}')
+
+    play_url = node.get('play') or node.get('wmplay') or ''
+    if not play_url:
+        raise RuntimeError('tikwm 未返回可下载视频地址')
+
+    final_vid = got_vid or expected_vid or 'unknown'
+    if not output_name:
+        output_name = f'tiktok_{final_vid}.mp4'
+    elif not output_name.endswith('.mp4'):
+        output_name += '.mp4'
+    output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+
+    req2 = urllib.request.Request(play_url, headers={
+        'User-Agent': UA,
+        'Referer': 'https://www.tikwm.com/',
+    })
+    with urllib.request.urlopen(req2, timeout=90) as resp:
+        with open(output_path, 'wb') as f:
+            while True:
+                chunk = resp.read(1024 * 1024)
+                if not chunk:
+                    break
+                f.write(chunk)
+
+    # 兜底校验：必须有视频轨；若可读到期望时长，则做时长近似校验
+    probe = subprocess.run(
+        ['ffprobe', '-v', 'error',
+         '-show_entries', 'stream=codec_type',
+         '-of', 'default=nw=1:nk=1', output_path],
+        text=True, capture_output=True
+    )
+    if probe.returncode != 0:
+        raise RuntimeError('ffprobe 校验失败')
+    stream_lines = [x.strip() for x in (probe.stdout or '').splitlines() if x.strip()]
+    if 'video' not in stream_lines:
+        raise RuntimeError('下载结果无视频轨，已中止')
+
+    expected_duration = node.get('duration')
+    actual_duration = get_media_duration_seconds(output_path)
+    duration_ok = None
+    if expected_duration:
+        try:
+            got = float(actual_duration) if actual_duration else 0.0
+            exp = float(expected_duration)
+            if got > 0 and exp > 0:
+                duration_ok = math.fabs(got - exp) <= 5.0
+                if not duration_ok:
+                    raise RuntimeError(
+                        f'tikwm 视频时长不匹配: expected~{exp}s, got={got:.2f}s'
+                    )
+        except ValueError:
+            duration_ok = None
+
+    size_mb = os.path.getsize(output_path) / 1048576
+    print(f"[TikTok/tikwm] 目标视频ID: {expected_vid or '-'}")
+    print(f"[TikTok/tikwm] 返回视频ID: {got_vid or '-'}")
+    if expected_duration:
+        print(f"[TikTok/tikwm] 返回时长: {expected_duration}s")
+    print(f"下载完成: {output_path} ({size_mb:.1f}MB)")
+    write_tiktok_meta(
+        output_path=output_path,
+        source='tikwm',
+        target_video_id=expected_vid,
+        resolved_video_id=got_vid or expected_vid,
+        expected_duration=expected_duration,
+        actual_duration=actual_duration,
+        validation={
+            'id_ok': (got_vid == expected_vid) if (got_vid and expected_vid) else None,
+            'duration_ok': duration_ok,
+            'video_track_ok': ('video' in stream_lines),
+        },
+        note='tikwm fallback parse/download',
+    )
+    return output_path
+
+def download_tiktok(url, output_name=None):
+    disable_tikwm = os.environ.get('VIDEO_DOWNLOAD_TIKTOK_DISABLE_TIKWM', '').strip() == '1'
+    attempts = []
+    # 第一轮：主路径
+    attempts.append(('cdp', download_tiktok_cdp))
+    if not disable_tikwm:
+        attempts.append(('tikwm', download_tiktok_tikwm))
+    # 第二轮重试：换路径重试一次
+    if not disable_tikwm:
+        attempts.append(('tikwm-retry', download_tiktok_tikwm))
+    attempts.append(('cdp-retry', download_tiktok_cdp))
+
+    errors = []
+    for name, fn in attempts:
+        try:
+            if 'tikwm' in name:
+                print(f"[TikTok] 尝试 {name} ...")
+            return fn(url, output_name)
+        except Exception as e:
+            errors.append(f'{name}={e}')
+            print(f"[TikTok] {name} 失败: {e}")
+
+    allow_fallback = os.environ.get('VIDEO_DOWNLOAD_TIKTOK_ALLOW_YTDLP_FALLBACK', '').strip() == '1'
+    if allow_fallback:
+        print("[TikTok] 按配置回退 yt-dlp...")
+        return download_ytdlp(url, output_name)
+
+    if disable_tikwm:
+        errors.append('tikwm=disabled')
+    raise RuntimeError(f"TikTok 下载失败（未启用 yt-dlp 回退）: {'; '.join(errors)}")
+
 # ── yt-dlp 通用下载（YouTube / Twitter / Instagram 等） ──
 
-def check_ytdlp():
-    """检查 yt-dlp 是否已安装"""
+def get_ytdlp_command():
+    """返回可用的 yt-dlp 命令前缀，例如 ['yt-dlp'] 或 ['python3', '-m', 'yt_dlp']"""
+    if shutil.which('yt-dlp'):
+        return ['yt-dlp']
     try:
-        subprocess.run(['yt-dlp', '--version'], capture_output=True, check=True)
-        return True
+        subprocess.run(['python3', '-m', 'yt_dlp', '--version'], capture_output=True, check=True)
+        return ['python3', '-m', 'yt_dlp']
     except (FileNotFoundError, subprocess.CalledProcessError):
-        return False
+        return None
 
 def extract_url(text):
     """从分享文本中提取 URL"""
@@ -522,7 +969,8 @@ def extract_url(text):
 
 def download_ytdlp(url, output_name=None):
     """使用 yt-dlp 下载视频（支持 YouTube / Twitter / Instagram 等 1700+ 站点）"""
-    if not check_ytdlp():
+    ytdlp_cmd = get_ytdlp_command()
+    if not ytdlp_cmd:
         print("错误: 未安装 yt-dlp")
         print("安装: brew install yt-dlp  或  pip3 install yt-dlp")
         sys.exit(1)
@@ -531,14 +979,13 @@ def download_ytdlp(url, output_name=None):
     out_dir = os.path.expanduser('~/Downloads')
     print(f"[1/2] 使用 yt-dlp 下载: {url}")
 
-    cmd = [
-        'yt-dlp',
-        '-f', 'bv*+ba/b',           # 最佳视频+音频，fallback 到最佳单文件
+    cmd = ytdlp_cmd + [
+        '-f', 'bv*+ba/b',
         '--merge-output-format', 'mp4',
-        '--no-playlist',             # 默认只下单个视频
+        '--no-playlist',
         '--no-warnings',
         '--progress',
-        '--newline',                 # 进度条每行刷新，方便终端读取
+        '--newline',
     ]
 
     if output_name:
@@ -569,6 +1016,7 @@ def main():
         print("  python3 download.py check-login <平台>             # 检查登录状态")
         print()
         print("支持平台: 抖音 / 小红书 / B站 (Playwright)")
+        print("         TikTok (CDP 优先，失败回退 yt-dlp)")
         print("         YouTube / Twitter / Instagram 等 (yt-dlp)")
         print("登录平台: bilibili / douyin / xiaohongshu")
         sys.exit(1)
@@ -612,8 +1060,9 @@ def main():
         download_xiaohongshu(url, output_name)
     elif platform == 'bilibili':
         download_bilibili(url, output_name)
+    elif platform == 'tiktok':
+        download_tiktok(url, output_name)
     else:
-        # 非抖音/小红书/B站，尝试 yt-dlp 通用下载
         download_ytdlp(share_text, output_name)
 
 if __name__ == '__main__':
