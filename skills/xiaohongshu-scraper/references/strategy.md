@@ -8,7 +8,7 @@
 2. Browser render with installed Chrome.
    - Use when static fetch returns no note state.
    - Prefer persistent user data only after user consent.
-   - Use the dedicated Xiaohongshu profile when a live browser is needed: CDP `http://127.0.0.1:9223`, user-data-dir `/Users/liyanpeng/Library/Application Support/Google/SocialScraperProfiles/Xiaohongshu`.
+   - Use the dedicated Xiaohongshu profile when a live browser is needed: CDP `http://127.0.0.1:9223`, user-data-dir `$HOME/Library/Application Support/Google/SocialScraperProfiles/Xiaohongshu`.
    - Use human-paced delays: 5-10 seconds between notes, longer after failures.
 3. Manual/user-assisted path.
    - If 小红书 returns `当前内容无法展示`, login wall, 404, or app-only content, stop and report the row.
@@ -101,7 +101,7 @@ For this workflow, do not use the default Chrome profile. Use the dedicated Xiao
 $HOME/Library/Application Support/Google/SocialScraperProfiles/Xiaohongshu
 ```
 
-Launch it with `/Users/liyanpeng/.agents/social-browser-profiles/launch-social-chrome.sh xhs`, then connect via `http://127.0.0.1:9223`. When Chrome is already running, persistent context may fail or may conflict with the active profile. In that case, use the existing live CDP browser rather than launching another instance with the same user-data-dir.
+Launch it with `~/.agents/social-browser-profiles/launch-social-chrome.sh xhs`, then connect via `http://127.0.0.1:9223`. When Chrome is already running, persistent context may fail or may conflict with the active profile. In that case, use the existing live CDP browser rather than launching another instance with the same user-data-dir.
 The Base entrypoint must hold `/tmp/social-scraper-locks/xiaohongshu.lock` while running so another session cannot control the same Xiaohongshu browser concurrently.
 
 Never print cookies, profile paths containing secrets, localStorage values, or request headers with credentials.

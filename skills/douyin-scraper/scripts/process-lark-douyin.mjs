@@ -1,12 +1,21 @@
 #!/usr/bin/env node
 import { spawn, spawnSync, execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { ensurePlatformBrowser } from "/Users/liyanpeng/.agents/social-browser-profiles/browser-helper.mjs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const skillDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const scraper = path.join(skillDir, "scripts", "scrape-douyin.py");
+const browserHelperPath = path.join(os.homedir(), ".agents", "social-browser-profiles", "browser-helper.mjs");
+
+async function ensurePlatformBrowserSafe(platform) {
+  const mod = await import(pathToFileURL(browserHelperPath).href);
+  if (typeof mod.ensurePlatformBrowser !== "function") {
+    throw new Error(`browser-helper missing ensurePlatformBrowser(): ${browserHelperPath}`);
+  }
+  return mod.ensurePlatformBrowser(platform);
+}
 
 function parseArgs(argv) {
   const options = {
@@ -88,10 +97,10 @@ function printHelp() {
 Processes 抖音 rows whose 抓取状态 is blank, 准备抓取, or 保持抓取. 准备抓取 writes body and engagement, then becomes 保持抓取. 保持抓取 refreshes only 点赞数/收藏数/抓取时间. Confirmed terminal failure writes 抓取异常.`);
 }
 
-function applyManagedBrowserDefaults(options) {
+async function applyManagedBrowserDefaults(options) {
   if (options.dryRun) return options;
   if (options.cdpUrl || options.chromeUserDataDir) return options;
-  const browser = ensurePlatformBrowser("douyin");
+  const browser = await ensurePlatformBrowserSafe("douyin");
   options.cdpUrl = browser.cdpUrl;
   options.cdpOnly = true;
   options.newTab = true;
@@ -521,7 +530,7 @@ function updateRecord(options, row, payload) {
 }
 
 async function main() {
-  const options = applyManagedBrowserDefaults(parseArgs(process.argv.slice(2)));
+  const options = await applyManagedBrowserDefaults(parseArgs(process.argv.slice(2)));
   const rows = readCandidates(options);
   const summary = {
     candidates: rows.length,

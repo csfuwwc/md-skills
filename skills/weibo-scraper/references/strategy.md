@@ -5,7 +5,7 @@
 Static Weibo requests often return Visitor System or Forbidden. Prefer a live Chrome session over CDP:
 
 - Connect with `--cdp-url http://127.0.0.1:9224`.
-- Use the dedicated Weibo user-data-dir `/Users/liyanpeng/Library/Application Support/Google/SocialScraperProfiles/Weibo`.
+- Use the dedicated Weibo user-data-dir `$HOME/Library/Application Support/Google/SocialScraperProfiles/Weibo`.
 - Use `--new-tab` so the user's existing tabs are not reused.
 - In CDP mode, `--new-tab` reuses the stable worker tab named `codex-weibo-worker` through `window.name`; it should not create a fresh tab per process run.
 - Do not inject external cookies into the live Chrome profile.

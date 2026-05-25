@@ -14,8 +14,8 @@ Use this skill for 小红书笔记链接抓取和表格回填. Prefer reliable, 
 Use the dedicated Xiaohongshu browser profile and CDP endpoint when a logged-in visible browser is explicitly needed:
 
 - CDP URL: `http://127.0.0.1:9223`
-- user-data-dir: `/Users/liyanpeng/Library/Application Support/Google/SocialScraperProfiles/Xiaohongshu`
-- launcher: `/Users/liyanpeng/.agents/social-browser-profiles/launch-social-chrome.sh xhs`
+- user-data-dir: `$HOME/Library/Application Support/Google/SocialScraperProfiles/Xiaohongshu`
+- launcher: `~/.agents/social-browser-profiles/launch-social-chrome.sh xhs`
 
 Do not use the default Chrome profile for Xiaohongshu scraping. Do not share this port/profile with Douyin or Weibo jobs.
 The Base entrypoint uses a local platform lock at `/tmp/social-scraper-locks/xiaohongshu.lock`; do not run two Xiaohongshu jobs at the same time from different sessions.

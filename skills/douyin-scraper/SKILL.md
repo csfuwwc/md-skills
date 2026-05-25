@@ -14,8 +14,8 @@ Use this skill for 抖音公开视频链接抓取和飞书 Base 回填. Default 
 Use the dedicated Douyin browser profile and CDP endpoint:
 
 - CDP URL: `http://[::1]:9222`
-- user-data-dir: `/Users/liyanpeng/Library/Application Support/Google/DouyinChrome`
-- launcher: `/Users/liyanpeng/.agents/social-browser-profiles/launch-social-chrome.sh douyin`
+- user-data-dir: `$HOME/Library/Application Support/Google/DouyinChrome`
+- launcher: `~/.agents/social-browser-profiles/launch-social-chrome.sh douyin`
 
 Do not use the default Chrome profile for Douyin scraping or commenting. Do not share this port/profile with Xiaohongshu or Weibo jobs.
 

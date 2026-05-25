@@ -9,7 +9,7 @@
 2. Logged-in Chrome fallback.
    - Use only after user consent.
    - Reuse one persistent browser context for the whole batch.
-   - Use the dedicated Douyin browser profile: CDP `http://[::1]:9222`, user-data-dir `/Users/liyanpeng/Library/Application Support/Google/DouyinChrome`.
+   - Use the dedicated Douyin browser profile: CDP `http://[::1]:9222`, user-data-dir `$HOME/Library/Application Support/Google/DouyinChrome`.
    - For repeated diagnostics, connect to an already-open Chrome over CDP and keep it open between links.
    - Use the same Chrome profile for login and scraping. A saved cookie file and a separate CDP `--user-data-dir` do not automatically share login state.
    - Keep batches small and delays human-paced.

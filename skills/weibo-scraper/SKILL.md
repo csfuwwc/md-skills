@@ -14,8 +14,8 @@ Use this skill for 微博公开帖子链接抓取和飞书 Base 回填. Prefer a
 Use the dedicated Weibo browser profile and CDP endpoint:
 
 - CDP URL: `http://127.0.0.1:9224`
-- user-data-dir: `/Users/liyanpeng/Library/Application Support/Google/SocialScraperProfiles/Weibo`
-- launcher: `/Users/liyanpeng/.agents/social-browser-profiles/launch-social-chrome.sh weibo`
+- user-data-dir: `$HOME/Library/Application Support/Google/SocialScraperProfiles/Weibo`
+- launcher: `~/.agents/social-browser-profiles/launch-social-chrome.sh weibo`
 
 Do not use the default Chrome profile for Weibo scraping. Do not share this port/profile with Douyin or Xiaohongshu jobs.
 The Base entrypoint uses a local platform lock at `/tmp/social-scraper-locks/weibo.lock`; do not run two Weibo jobs at the same time from different sessions.

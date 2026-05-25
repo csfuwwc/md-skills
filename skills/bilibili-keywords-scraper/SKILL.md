@@ -59,7 +59,7 @@ Do not commit user-specific config files into a skill repo.
 Dry-run from the currently open/filtered Bilibili search page:
 
 ```bash
-node ~/.agents/skills/bilibili-up-candidate-scraper/scripts/run_candidate_pipeline.mjs \
+node ~/.agents/skills/bilibili-keywords-scraper/scripts/run_candidate_pipeline.mjs \
   --config ./.bilibili-up-candidates.config.json \
   --keyword "示例关键词" \
   --mode current \
@@ -69,7 +69,7 @@ node ~/.agents/skills/bilibili-up-candidate-scraper/scripts/run_candidate_pipeli
 Write to table and enrich profile data:
 
 ```bash
-node ~/.agents/skills/bilibili-up-candidate-scraper/scripts/run_candidate_pipeline.mjs \
+node ~/.agents/skills/bilibili-keywords-scraper/scripts/run_candidate_pipeline.mjs \
   --config ./.bilibili-up-candidates.config.json \
   --keyword "示例关键词" \
   --mode current \
@@ -82,7 +82,7 @@ node ~/.agents/skills/bilibili-up-candidate-scraper/scripts/run_candidate_pipeli
 Navigate by keyword and sort, then write:
 
 ```bash
-node ~/.agents/skills/bilibili-up-candidate-scraper/scripts/run_candidate_pipeline.mjs \
+node ~/.agents/skills/bilibili-keywords-scraper/scripts/run_candidate_pipeline.mjs \
   --config ./.bilibili-up-candidates.config.json \
   --keyword "示例关键词" \
   --sort pubdate \
@@ -94,7 +94,7 @@ node ~/.agents/skills/bilibili-up-candidate-scraper/scripts/run_candidate_pipeli
 Collect search results only, without visiting UP homepages:
 
 ```bash
-node ~/.agents/skills/bilibili-up-candidate-scraper/scripts/run_candidate_pipeline.mjs \
+node ~/.agents/skills/bilibili-keywords-scraper/scripts/run_candidate_pipeline.mjs \
   --config ./.bilibili-up-candidates.config.json \
   --keyword "示例关键词" \
   --mode current \
