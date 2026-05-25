@@ -1,0 +1,34 @@
+{
+  "lark": {
+    "baseToken": "YOUR_BASE_TOKEN",
+    "tableId": "YOUR_TABLE_ID",
+    "viewId": "OPTIONAL_VIEW_ID"
+  },
+  "browser": {
+    "platform": "bilibili",
+    "cdpUrl": "http://127.0.0.1:PORT"
+  },
+  "fields": {
+    "upName": "UP姓名列表",
+    "keywords": "命中关键词",
+    "upUrl": "UP主链接",
+    "sourceVideoUrl": "来源视频链接",
+    "sourceVideoTitle": "来源视频标题",
+    "fans": "粉丝数",
+    "likes": "获赞数",
+    "plays": "播放数",
+    "rep1Title": "代表作1标题",
+    "rep1Url": "代表作1链接",
+    "rep2Title": "代表作2标题",
+    "rep2Url": "代表作2链接",
+    "rep3Title": "代表作3标题",
+    "rep3Url": "代表作3链接",
+    "contacts": "提供联系方式",
+    "scrapedAt": "抓取时间"
+  },
+  "defaults": {
+    "batchSize": 50,
+    "intervalMs": 3000,
+    "maxPages": 80
+  }
+}

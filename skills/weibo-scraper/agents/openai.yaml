@@ -1,0 +1,3 @@
+display_name: 微博抓取
+short_description: 从微博链接抓取正文、点赞和视频画面解析
+default_prompt: 抓取微博链接的正文、点赞数和视频内容，并按抓取状态回填飞书 Base。

@@ -1,0 +1,6 @@
+interface:
+  display_name: "小红书抓取"
+  short_description: "从小红书链接抓取正文与公开互动数据"
+  default_prompt: "Use $xiaohongshu-scraper to scrape these 小红书 links and return table-ready fields."
+policy:
+  allow_implicit_invocation: true

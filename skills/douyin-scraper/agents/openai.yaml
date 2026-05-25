@@ -1,0 +1,6 @@
+interface:
+  display_name: "抖音抓取"
+  short_description: "从抖音链接抓取正文、互动数并解析视频画面"
+  default_prompt: "Use $douyin-scraper to scrape these 抖音 links and return table-ready fields."
+policy:
+  allow_implicit_invocation: true

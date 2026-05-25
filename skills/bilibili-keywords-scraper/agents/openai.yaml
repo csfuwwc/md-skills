@@ -1,0 +1,3 @@
+display_name: B站候选UP抓取
+short_description: 按关键词和筛选条件抓取 B站 UP 候选池，并回填飞书多维表格。
+default_prompt: 使用已配置的 B站浏览器实例，从当前筛选好的搜索页或指定关键词抓取 UP 候选数据，去重后写入我配置的飞书候选UP池。

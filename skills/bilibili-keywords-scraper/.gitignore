@@ -1,0 +1,3 @@
+.bilibili-up-candidates.config.json
+*.local.json
+*.secret.json
