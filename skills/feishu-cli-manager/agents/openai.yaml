@@ -1,0 +1,6 @@
+interface:
+  display_name: "飞书 CLI 管理"
+  short_description: "安装、配置并维护 Feishu/Lark CLI 授权"
+  default_prompt: "Use $feishu-cli-manager to install or check lark-cli and refresh Feishu auth if needed."
+policy:
+  allow_implicit_invocation: true
