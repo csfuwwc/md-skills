@@ -134,7 +134,7 @@ function acquirePlatformLock(name) {
         const current = JSON.parse(fs.readFileSync(lockPath, "utf8"));
         if (current.pid === process.pid) fs.unlinkSync(lockPath);
       } catch {
-        // Best-effort cleanup only.
+        // Ignore cleanup failures so the scraper outcome remains the primary signal.
       }
     };
   } catch (error) {
