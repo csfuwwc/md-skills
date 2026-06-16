@@ -14,6 +14,7 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | [feishu-cli-manager](skills/feishu-cli-manager/) | 飞书/Lark CLI 安装、配置与授权刷新维护 |
 | [video-download](skills/video-download/) | 通用社媒视频下载（抖音/小红书/B站/TikTok/YouTube 等） |
 | [seedance-prompt](skills/seedance-prompt/) | 即梦 Seedance 2.0 视频脚本 Prompt 生成 |
+| [skill-vetter](skills/skill-vetter/) | 第三方 Skill 安装前的安全审查与风险分级 |
 
 ## 安装
 
@@ -46,7 +47,7 @@ npx skills add https://github.com/csfuwwc/md-skills --skill douyin-scraper
 自动安装到 `~/.cursor/skills/` 和 `~/.claude/skills/` 等目录，支持 [skills.sh](https://skills.sh/csfuwwc/md-skills/video-download) 生态。
 
 可替换 `--skill` 为以下任一值：
-`bilibili-keywords-scraper` `douyin-scraper` `weibo-scraper` `xiaohongshu-scraper` `imap-smtp-email` `feishu-cli-manager` `video-download` `seedance-prompt`
+`bilibili-keywords-scraper` `douyin-scraper` `weibo-scraper` `xiaohongshu-scraper` `imap-smtp-email` `feishu-cli-manager` `video-download` `seedance-prompt` `skill-vetter`
 
 ### curl 一键安装
 
