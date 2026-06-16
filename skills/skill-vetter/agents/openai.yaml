@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skill Vetter"
+  short_description: "Vet third-party skills before install."
+  default_prompt: "Vet this skill before I install or run it."
