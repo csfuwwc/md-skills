@@ -15,6 +15,8 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | [video-download](skills/video-download/) | 通用社媒视频下载（抖音/小红书/B站/TikTok/YouTube 等） |
 | [seedance-prompt](skills/seedance-prompt/) | 即梦 Seedance 2.0 视频脚本 Prompt 生成 |
 | [skill-vetter](skills/skill-vetter/) | 第三方 Skill 安装前的安全审查与风险分级 |
+| [humanizer](skills/humanizer/) | 去除英文文本的 AI 写作痕迹（基于维基百科 Signs of AI writing） |
+| [humanizer-zh](skills/humanizer-zh/) | 去除中文文本的 AI 味/翻译腔（humanizer 中文版） |
 
 ## 安装
 
