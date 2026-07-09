@@ -17,6 +17,7 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | [skill-vetter](skills/skill-vetter/) | 第三方 Skill 安装前的安全审查与风险分级 |
 | [humanizer](skills/humanizer/) | 去除英文文本的 AI 写作痕迹（基于维基百科 Signs of AI writing） |
 | [humanizer-zh](skills/humanizer-zh/) | 去除中文文本的 AI 味/翻译腔（humanizer 中文版） |
+| [funcinating-news](skills/funcinating-news/) | 基于新闻/话题生成 Funcinating 双语资讯（查证事实→五拍骨架→去AI味→发布到 Shopify news） |
 
 ## 安装
 
