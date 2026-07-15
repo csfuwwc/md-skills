@@ -78,15 +78,38 @@ def import_mf(cfg, lang, inp):
     print(f"写入 _<lang> metafield 变体 {ok} 个,错误 {len(errs)}")
     for e in errs[:5]: print("  ",e)
 
+def market_check(cfg, lang):
+    """#2 校验:翻译完还得在 market 启用+发布该语言,否则前台不显示(翻完纳闷没变的坑)。"""
+    store=cfg["shopify_store"]
+    q='{ markets(first:50){ edges{ node{ name enabled webPresence{ defaultLocale{locale} alternateLocales{locale} } } } } }'
+    d=_lib.shopify(q, store)
+    hit=[]
+    for e in d["markets"]["edges"]:
+        n=e["node"]; wp=n.get("webPresence") or {}
+        locs=[(wp.get("defaultLocale") or {}).get("locale")]+[a["locale"] for a in (wp.get("alternateLocales") or [])]
+        if lang in locs: hit.append((n["name"], n["enabled"]))
+    print(f"[market-check] 语言 {lang}:")
+    if not hit:
+        print(f"  ✗ 没有任何 market 启用了 {lang} —— 就算内容翻好了,前台也不会显示这门语言!")
+        print(f"    去 Shopify 后台 设置→市场→选市场→语言,添加并发布 {lang}。")
+        return False
+    for name,en in hit:
+        print(f"  {'✓' if en else '✗ 市场未启用'} {name}:含 {lang}")
+    live=[n for n,en in hit if en]
+    print(f"  → {lang} 已在 {len(live)} 个启用市场:{', '.join(live) if live else '(都没启用!)'}")
+    return bool(live)
+
 def main():
     ap=argparse.ArgumentParser()
-    ap.add_argument("--entity",required=True,choices=list(RES_TYPE.keys()))
+    ap.add_argument("--entity",default="product",choices=list(RES_TYPE.keys()))
     ap.add_argument("--lang",required=True)  # zh-CN/zh-TW/th/es
     ap.add_argument("--export"); ap.add_argument("--import",dest="imp")
     ap.add_argument("--export-mf"); ap.add_argument("--import-mf",dest="impmf"); ap.add_argument("--metafields",action="store_true")
+    ap.add_argument("--market-check",action="store_true",help="校验该语言是否已在 market 启用+发布")
     ap.add_argument("--skill-dir",default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     a=ap.parse_args()
     cfg=_lib.load_config(a.skill_dir); _lib.ensure_ready(cfg)
+    if a.market_check: sys.exit(0 if market_check(cfg,a.lang) else 1)
     if a.export: export(cfg,a.entity,a.lang,a.export)
     elif a.imp: imp(cfg,a.entity,a.lang,a.imp)
     elif a.export_mf: export_mf(cfg,a.entity,a.lang,a.export_mf)

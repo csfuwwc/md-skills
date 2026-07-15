@@ -47,7 +47,8 @@
   },
   "theme": {
     "env_local_path": "~/fe-www.funcinating.com-next/.env.local",
-    "_comment": "仅步骤4多语言/主题改动需要;含 SHOPIFY_CLI_THEME_TOKEN/LIVE_THEME_ID"
+    "locales_dir": "~/fe-www.funcinating.com-next/shopify-theme-funcinating-live/locales",
+    "_comment": "仅步骤4多语言/主题改动需要;含 SHOPIFY_CLI_THEME_TOKEN/LIVE_THEME_ID;locales_dir=主题checkout的locales目录(locale_check.py用,各机路径不同、本地可覆盖)"
   },
   "required_apps": [
     {

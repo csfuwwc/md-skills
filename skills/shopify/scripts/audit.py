@@ -28,4 +28,15 @@ def main():
         if miss: allok=False; print(f"  ⚠️ {title[:36]}  缺:{'、'.join(m.split(' ')[0] for m in miss)}")
         else: print(f"  ✅ {title[:36]}  硬缺已齐")
     print("\n"+("全部硬缺已齐" if allok and rows else "有待补,提醒同事补上缺项" if rows else "无待补行"))
+    # #3 配送方案陷阱:Shopify「1商品=1配送方案」,多配送区曾被复制成「款×2」(-TH)。扫区域后缀警示。
+    if a.entity=="product":
+        import re
+        allrows=_lib.bitable_list(cfg)
+        SUF=re.compile(r'[-_( ](th|tw|hk|mo|mx|es|jp|kr)\)?\s*$', re.I)
+        dups=[_lib.cell_text(r["fields"].get(name_f)) for r in allrows
+              if SUF.search(_lib.cell_text(r["fields"].get(name_f)) or "")]
+        if dups:
+            print(f"\n⚠️ 配送方案警示:{len(dups)} 个商品名带区域后缀(如 {dups[0][:30]}…)。")
+            print("   Shopify『1商品=1配送方案』,别为多配送区复制商品(会变『款×2』数据乱);")
+            print("   正解=一个配送方案 + 多个仓库组(location group),复制可避免。详见飞书《Shopify建站》。")
 if __name__=="__main__": main()

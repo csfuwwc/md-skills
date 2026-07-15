@@ -78,8 +78,11 @@ compatibility: any-agent
 - **跑法(两套内容,机械 bookends,中间 agent 翻)**:
   - **标准可翻译内容**(title/描述/SEO):`translate.py --entity <e> --lang <l> --export out.json` 拉 EN+digest → agent 逐条填 `target` → `--import out.json` 走 `translationsRegister` 回。
   - **`_<lang>` metafield 变体**(json/rich_text 不走标准翻译):`translate.py --entity <e> --lang <l> --export-mf mf.json` 拉 scenario_copy/faq(商品)、editorial_body/faq/homepage_*(集合)的 EN 基线 → agent 保结构翻 → `--import-mf mf.json` 走 `metafieldsSet` 写 `<key>_<lang>`(后缀见 entities.LANG_SUFFIX:es/th/zh/zh_tw)。已 E2E 验证(ZZ 测试 key 写→查→删零残留)。
+- **上线前两道自检(踩过的坑,务必跑)**:
+  - ★**主题 UI 完整性**:`python3 locale_check.py --lang <l>`——比对 `locales/en.default.json` vs `<l>.json`,揪出**缺失/还是英文的主题串**(筛选条 All/HOT/NEW、角标、header/footer/blog、aria)。★**新语言最爱漏这个,店面半英半外自己看不出**★。`--out gaps.json` 导缺口给 agent 翻,合并回 `<l>.json` 再 `theme publish`。目录=config.theme.locales_dir。
+  - **market 启用**:`python3 translate.py --lang <l> --market-check`——**内容翻好了还得在 market 启用+发布该语言**,否则前台根本不显示(翻完纳闷「怎么没变」的坑)。
 - **触发**:EN 基线定后(可与步骤 3 并行)。目标语言 = config.languages.alternates。
-- **做**:从 EN 翻 title/描述/SEO → 各语言;`_<lang>` metafield 变体(scenario_copy/faq);术语拍板(如 charm→llavero)问一次。zh-TW/th/es 批量翻,zh-CN 可同事原创。
+- **做**:从 EN 翻 title/描述/SEO → 各语言;`_<lang>` metafield 变体(scenario_copy/faq);**主题 UI 串(locale_check 揪出的)**;术语拍板(如 charm→llavero)问一次。zh-TW/th/es 批量翻,zh-CN 可同事原创。
 - **铁律**:DNT/handle 不译 · **各语言共用英文 handle** · 非美元语言无 `$` · 功能词本地化 · **主题 UI 译文必须进 `locales/<lang>.json` 文件(release 会冲掉 API override)** · 上线后 **`theme publish` 清缓存**(`push` 不清)。深挖见飞书手册。
 - **责任**:skill 翻;术语问同事。
 
@@ -101,6 +104,9 @@ compatibility: any-agent
 6. **json 字段(faq)必须合法**,否则 schema/前台坏。
 7. **主题层改动**才需 `theme publish` 清 CDN 缓存(`theme push` 不清);单纯加商品不用。
 8. **飞书表是 SSOT**:阶段用视图不拆表;实体(商品/集合/文章)各一张表。
+9. **新语言别只翻商品**:主题 UI 串(locale 文件)+ market 启用是两个独立必做项——跑 `locale_check.py` + `--market-check` 自检,否则店面半英半外 / 前台压根不显示。
+10. **多配送区别复制商品**:Shopify「1商品=1配送方案」,复制会变「款×2」数据乱(-TH 教训);用一方案+多仓库组。audit 会扫区域后缀警示。
+11. **Judge.me 评价挂件**:用**官方挂件**(简版会空),且 app embed 的 `settings_data` 必须存进主题设置,否则 release 会剥掉挂件;改主题 `--only` 外科式推。评价按用户原文展示,不做语言适配。
 
 ## 关联
 - 深挖多语言:飞书《多语言适配指南(复用手册)》
