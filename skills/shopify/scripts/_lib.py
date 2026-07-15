@@ -57,7 +57,7 @@ def bitable_list(cfg):
     """拉全部记录,返回 [{record_id, fields}]。"""
     app=cfg["feishu"]["app_token"]; tbl=cfg["feishu"]["table_id"]; prof=cfg["feishu"]["profile"]
     d=_lark(["api","GET",f"/bitable/v1/apps/{app}/tables/{tbl}/records","--params",'{"page_size":200}'], prof)
-    return (d.get("data") or {}).get("items", [])
+    return (d.get("data") or {}).get("items") or []
 
 def bitable_field_names(cfg):
     app=cfg["feishu"]["app_token"]; tbl=cfg["feishu"]["table_id"]; prof=cfg["feishu"]["profile"]

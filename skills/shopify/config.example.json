@@ -60,5 +60,16 @@
       "purpose": "商品评价展示(可选)",
       "required": false
     }
-  ]
+  ],
+  "entities": {
+    "product": {
+      "table_id": "SET_IN_config.local.json"
+    },
+    "collection": {
+      "table_id": "SET_IN_config.local.json"
+    },
+    "article": {
+      "table_id": "SET_IN_config.local.json"
+    }
+  }
 }
