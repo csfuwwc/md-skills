@@ -40,6 +40,7 @@ def main():
                 tl=[t.strip() for t in tags.replace("|",",").split(",") if t.strip()]
                 if set(tl)!=set(cur.get("tags") or []): pin["tags"]=tl; changed.append("tags")
         if wb["activate"] and cur.get("status")!="ACTIVE": pin["status"]="ACTIVE"; changed.append("status:ACTIVE")
+        if wb.get("publish"): pin["isPublished"]=True
         mfs=[]
         for col,(ns,key,typ) in wb["mf_map"].items():
             v=_lib.cell_text(F.get(col)).strip()
@@ -53,8 +54,10 @@ def main():
         if len(pin)<=1 and not mfs and not want_cols: print(f"  · {title}: 无变化,跳过"); continue
         print(f"  ✎ {title}: update={changed} · metafields={[m['key'] for m in mfs]}" + (f" · 集合+{want_cols}" if want_cols else ""))
         if a.dry_run: continue
-        if len(pin)>1:
-            r1=_lib.shopify(wb["update_mutation"], store, {"p":pin}, allow_mutations=True)
+        if len([k for k in pin if k!="id"])>0:
+            if wb.get("id_in_input", True): vv={wb.get("var","p"):pin}
+            else: vv={"id":pin["id"], wb.get("var","a"):{k:v for k,v in pin.items() if k!="id"}}
+            r1=_lib.shopify(wb["update_mutation"], store, vv, allow_mutations=True)
             ue=list(r1.values())[0]["userErrors"]
             if ue: print("    ⚠️update err:",ue)
         if mfs:

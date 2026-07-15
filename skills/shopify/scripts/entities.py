@@ -61,11 +61,34 @@ def build_collection(node, cfg):
       "IP卡_summary EN":(node.get("hs") or {}).get("value") or "","IP卡_chips EN":(node.get("hc") or {}).get("value") or ""}
     return mirror, content
 
+
+# ---------- ARTICLE ----------
+ARTICLE_QUERY = """query($cursor:String){ articles(first:50, after:$cursor){
+  edges{ cursor node{
+    id handle title body summary tags
+    author{ name } blog{ handle } image{ url }
+    tt:metafield(namespace:"global",key:"title_tag"){ value }
+    dt:metafield(namespace:"global",key:"description_tag"){ value }
+  } } pageInfo{ hasNextPage endCursor } } }"""
+
+def build_article(node, cfg):
+    mirror={"Article ID":node["id"],"Handle":node.get("handle") or "",
+            "博客":(node.get("blog") or {}).get("handle",""),"作者":(node.get("author") or {}).get("name","")}
+    content={"文章标题":node.get("title") or "","文章正文EN":node.get("body") or "",
+             "摘要EN":node.get("summary") or "",
+             "SEO Title EN":(node.get("tt") or {}).get("value") or "",
+             "SEO描述EN":(node.get("dt") or {}).get("value") or "",
+             "Tags":", ".join(node.get("tags") or []),"主图URL":(node.get("image") or {}).get("url","")}
+    return mirror, content
+
 ENTITIES = {
  "product":   {"query":PRODUCT_QUERY,   "build":build_product,   "key":"Shopify Product ID",
                "status":"内容审核状态", "date":"最近Shopify同步日期", "supports_query":True},
  "collection":{"query":COLLECTION_QUERY,"build":build_collection,"key":"Collection ID",
                "status":"内容审核状态", "date":"最近同步日期", "supports_query":False},
+ "article":   {"query":ARTICLE_QUERY,   "build":build_article,   "key":"Article ID",
+               "status":"内容审核状态", "date":"最近同步日期", "supports_query":False,
+               "hard":["文章标题","文章正文EN"]},
 }
 
 # ---------- 写回规格(sync_writeback 用)----------
@@ -108,6 +131,18 @@ COLLECTION_WB = {
  "target_collections":[],
  "title_field":"集合名称",
 }
+ARTICLE_WB = {
+ "cur_query":"query($id:ID!){ article(id:$id){ title body summary tags metafields(first:20){ edges{ node{ namespace key value } } } } }",
+ "cur_key":"article",
+ "update_mutation":"mutation($id:ID!,$a:ArticleUpdateInput!){ articleUpdate(id:$id, article:$a){ userErrors{field message} } }",
+ "id_in_input":False, "var":"a", "publish":True,
+ "pu_map":{"文章标题":"title","文章正文EN":"body","摘要EN":"summary"},
+ "seo_map":{}, "tags_field":"Tags",
+ "mf_map":{"SEO Title EN":("global","title_tag","single_line_text_field"),
+           "SEO描述EN":("global","description_tag","single_line_text_field")},
+ "activate":False, "target_collections":[], "title_field":"文章标题",
+}
+ENTITIES["article"]["wb"]=ARTICLE_WB
 ENTITIES["product"]["hard"]=["商品名称","商品描述EN","主图URL","IP|角色","custom.material 材质","custom.series 系列","custom.box_size_cm 单盒尺寸：长|宽|高","custom.height_cm 高度","资料来源|官方依据"]
 ENTITIES["collection"]["hard"]=["集合名称","集合描述EN","editorial_body EN","FAQ EN"]
 ENTITIES["product"]["wb"]=PRODUCT_WB

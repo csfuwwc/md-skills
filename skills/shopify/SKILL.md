@@ -28,6 +28,11 @@ compatibility: any-agent
 2. **授权**:Shopify 走 `shopify store execute`(自带鉴权);Feishu 走 `lark-cli --profile <config.feishu.profile> --as user`(keychain 托管)。**任何 token 都别写进文件。**
 3. **依赖**:`shopify` CLI、`lark-cli`、`python3`;多语言深挖见飞书《多语言适配指南(复用手册)》。
 
+## 实体(entity)—— 一套脚本,三个资源
+本 skill 用 `--entity product|collection|article` 覆盖 3 类 Shopify 资源,各自一张飞书表(config.entities),字段映射在 `scripts/entities.py`。**新增实体只在 entities.py 加一段 + config 加表**。
+- `product`(商品,数据表)· `collection`(集合表,editorial/faq/IP卡)· `article`(文章表,news/guides,SEO走global.*_tag)
+- 所有脚本都接 `--entity`:`sync_pull.py --entity collection` / `audit.py --entity article` / `sync_writeback.py --entity collection`。默认 product。
+
 ## 步骤 0 · `preflight`(初始化自检)· ✅ 已脚本化 —— **每次上手先跑**
 - **跑法**:`cd scripts && python3 preflight.py`
 - **查什么**:①`config.local.json` 是否建好并填了 feishu 表标识 ②飞书授权(能否读表)③Shopify 授权(能否连店)④主题访问(`.env.local` 含 THEME_TOKEN,仅步骤4/改主题需要)⑤**列出流水线依赖的 Shopify 应用清单让你确认已装**(如 Translate & Adapt;后台 API 查不到、须人工确认,配 `config.required_apps`)。
