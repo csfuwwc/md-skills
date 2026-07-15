@@ -4,3 +4,7 @@ __pycache__/
 *.pyo
 .env
 *.log
+
+# 业务敏感标识(Feishu 表 token),不进公开仓库
+config.local.json
+_larkpost_*.json
