@@ -30,7 +30,7 @@ compatibility: any-agent
 
 ## 实体(entity)—— 一套脚本,三个资源
 本 skill 用 `--entity product|collection|article` 覆盖 3 类 Shopify 资源,各自一张飞书表(config.entities),字段映射在 `scripts/entities.py`。**新增实体只在 entities.py 加一段 + config 加表**。
-- `product`(商品,数据表)· `collection`(集合表,editorial/faq/IP卡)· `article`(文章表,news/guides,SEO走global.*_tag)
+- `product`(商品)· `collection`(集合,editorial/faq/IP卡)· `article`(文章,news/guides)· `page`(页面,about/faq/政策/信任页)—— 均 pull→audit→writeback E2E 闭环
 - 所有脚本都接 `--entity`:`sync_pull.py --entity collection` / `audit.py --entity article` / `sync_writeback.py --entity collection`。默认 product。
 
 ## 步骤 0 · `preflight`(初始化自检)· ✅ 已脚本化 —— **每次上手先跑**

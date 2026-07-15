@@ -81,6 +81,31 @@ def build_article(node, cfg):
              "Tags":", ".join(node.get("tags") or []),"主图URL":(node.get("image") or {}).get("url","")}
     return mirror, content
 
+
+# ---------- PAGE ----------
+PAGE_QUERY = """query($cursor:String){ pages(first:50, after:$cursor){
+  edges{ cursor node{ id handle title body templateSuffix
+    tt:metafield(namespace:"global",key:"title_tag"){ value }
+    dt:metafield(namespace:"global",key:"description_tag"){ value }
+  } } pageInfo{ hasNextPage endCursor } } }"""
+
+def build_page(node, cfg):
+    mirror={"Page ID":node["id"],"Handle":node.get("handle") or "","模板后缀":node.get("templateSuffix") or ""}
+    content={"页面标题":node.get("title") or "","正文EN":node.get("body") or "",
+             "SEO Title EN":(node.get("tt") or {}).get("value") or "","SEO描述EN":(node.get("dt") or {}).get("value") or ""}
+    return mirror, content
+
+PAGE_WB = {
+ "cur_query":"query($id:ID!){ page(id:$id){ title body metafields(first:20){ edges{ node{ namespace key value } } } } }",
+ "cur_key":"page",
+ "update_mutation":"mutation($id:ID!,$p:PageUpdateInput!){ pageUpdate(id:$id, page:$p){ userErrors{field message} } }",
+ "id_in_input":False, "var":"p", "publish":True,
+ "pu_map":{"页面标题":"title","正文EN":"body"}, "seo_map":{}, "tags_field":None,
+ "mf_map":{"SEO Title EN":("global","title_tag","single_line_text_field"),
+           "SEO描述EN":("global","description_tag","single_line_text_field")},
+ "activate":False, "target_collections":[], "title_field":"页面标题",
+}
+
 ENTITIES = {
  "product":   {"query":PRODUCT_QUERY,   "build":build_product,   "key":"Shopify Product ID",
                "status":"内容审核状态", "date":"最近Shopify同步日期", "supports_query":True},
@@ -89,6 +114,9 @@ ENTITIES = {
  "article":   {"query":ARTICLE_QUERY,   "build":build_article,   "key":"Article ID",
                "status":"内容审核状态", "date":"最近同步日期", "supports_query":False,
                "hard":["文章标题","文章正文EN"]},
+ "page":      {"query":PAGE_QUERY,      "build":build_page,      "key":"Page ID",
+               "status":"内容审核状态", "date":"最近同步日期", "supports_query":False,
+               "hard":["页面标题"], "wb":PAGE_WB},
 }
 
 # ---------- 写回规格(sync_writeback 用)----------
