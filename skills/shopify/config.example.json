@@ -44,5 +44,21 @@
       "gifts-under-30",
       "desk-companions"
     ]
-  }
+  },
+  "theme": {
+    "env_local_path": "~/fe-www.funcinating.com-next/.env.local",
+    "_comment": "仅步骤4多语言/主题改动需要;含 SHOPIFY_CLI_THEME_TOKEN/LIVE_THEME_ID"
+  },
+  "required_apps": [
+    {
+      "name": "Translate & Adapt",
+      "purpose": "多语言可视化翻译(步骤4,官方免费)",
+      "required": true
+    },
+    {
+      "name": "Judge.me",
+      "purpose": "商品评价展示(可选)",
+      "required": false
+    }
+  ]
 }

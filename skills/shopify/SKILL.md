@@ -21,9 +21,14 @@ compatibility: any-agent
 - 想让「换 agent、换人」都能一致跑完上架。
 
 ## 前提(跑之前)
-1. **config**:`cp config.example.json config.local.json`,在 `config.local.json` 填 Feishu `app_token`/`table_id`(★这项不进公开仓库,只在本地★)。运行时合并 example + local。
+1. **config(必做)**:`cp config.example.json config.local.json`,在 `config.local.json` 填你的 Feishu 表 `app_token`/`table_id`(从表 URL 取;★这项不进公开仓库、只在本地;换设备各自建一份★)。运行时合并 example + local。
 2. **授权**:Shopify 走 `shopify store execute`(自带鉴权);Feishu 走 `lark-cli --profile <config.feishu.profile> --as user`(keychain 托管)。**任何 token 都别写进文件。**
 3. **依赖**:`shopify` CLI、`lark-cli`、`python3`;多语言深挖见飞书《多语言适配指南(复用手册)》。
+
+## 步骤 0 · `preflight`(初始化自检)· ✅ 已脚本化 —— **每次上手先跑**
+- **跑法**:`cd scripts && python3 preflight.py`
+- **查什么**:①`config.local.json` 是否建好并填了 feishu 表标识 ②飞书授权(能否读表)③Shopify 授权(能否连店)④主题访问(`.env.local` 含 THEME_TOKEN,仅步骤4/改主题需要)⑤**列出流水线依赖的 Shopify 应用清单让你确认已装**(如 Translate & Adapt;后台 API 查不到、须人工确认,配 `config.required_apps`)。
+- **缺就提示怎么补**(建 config / 跑 lark-cli auth / 配 shopify 凭证),全 ✅ 才开始 sync_pull。新设备/换人第一件事就跑它。
 
 ## 字段契约(飞书表 59→现 54 字段,4 桶)
 - **① 镜像**(Shopify→表,只读回填):Product ID(幂等键)· handle · 商品URL · 状态 · Vendor · 变体/SKU/价/库存 · 主图 · category
