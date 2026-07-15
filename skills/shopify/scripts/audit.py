@@ -13,7 +13,7 @@ def main():
     ap=argparse.ArgumentParser(); ap.add_argument("--status",default="待补素材")
     ap.add_argument("--skill-dir",default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     a=ap.parse_args()
-    cfg=_lib.load_config(a.skill_dir)
+    cfg=_lib.load_config(a.skill_dir); _lib.ensure_ready(cfg)
     rows=[r for r in _lib.bitable_list(cfg) if _lib.cell_text(r["fields"].get("内容审核状态"))==a.status]
     print(f"核查(状态={a.status}) {len(rows)} 行\n")
     allok=True

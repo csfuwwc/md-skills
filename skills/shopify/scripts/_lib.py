@@ -64,6 +64,17 @@ def bitable_field_names(cfg):
     d=_lark(["api","GET",f"/bitable/v1/apps/{app}/tables/{tbl}/fields","--params",'{"page_size":200}'], prof)
     return [f["field_name"] for f in (d.get("data") or {}).get("items", [])]
 
+def ensure_ready(cfg):
+    """轻量前置守卫:config 没建好就友好报错退出,指向 preflight。任何脚本开头调用。"""
+    import sys
+    f=cfg.get("feishu") or {}
+    at, tid = f.get("app_token",""), f.get("table_id","")
+    if not at or "SET_IN" in at or not tid or "SET_IN" in tid or not cfg.get("shopify_store"):
+        print("❌ 初始化未完成:config.local.json 未建好(feishu.app_token/table_id 未填)。")
+        print("   → 1) cp config.example.json config.local.json 并填入你的飞书表标识")
+        print("      2) 先跑 `python3 preflight.py` 做完整自检(config/授权/依赖应用),全绿再跑本脚本。")
+        sys.exit(1)
+
 def cell_text(v):
     if v is None: return ""
     if isinstance(v,str): return v

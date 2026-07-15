@@ -216,6 +216,16 @@ post_install() {
         bash "$dest/setup.sh" || warn "setup.sh 执行失败，请手动处理"
     fi
 
+    # 需要初始化配置的 skill(有 config.example.json)
+    if [[ -f "$dest/config.example.json" ]]; then
+        echo ""
+        warn "'$skill_name' 需要先初始化再用:"
+        info "  1) cp \"$dest/config.example.json\" \"$dest/config.local.json\" 并填入你的标识(config.local.json 不进仓库、每台设备各建一份)"
+        if [[ -f "$dest/scripts/preflight.py" ]]; then
+            info "  2) cd \"$dest/scripts\" && python3 preflight.py  # 自检 config/授权/依赖应用,全绿再用"
+        fi
+    fi
+
     echo ""
     ok "安装完成！重启 Cursor 后 Agent 即可使用 '$skill_name' skill。"
     echo ""

@@ -6,12 +6,15 @@ description: |
   skill 把 SEO/handle/metafield/FAQ/集合/结构化数据/多语言/写回上架 全包,只在缺输入、
   需拍板、要确认上线时找人。5 步:sync-pull → audit → optimize → translate → confirm-publish。
   无「审核」环节——「确认上线」是唯一人工闸。飞书表=工作台+SSOT,Shopify↔飞书同步。
-  与 humanizer / humanizer-zh 组合。业务标识读 config;token 走 keychain/.env.local 不写死。
+  与 humanizer / humanizer-zh 组合。★用前必跑 `scripts/preflight.py` 自检(config/授权/依赖应用),缺就按提示补★。业务标识读 config;token 走 keychain/.env.local 不写死。
 license: MIT
 compatibility: any-agent
 ---
 
 # shopify:独立站商品上架流水线
+
+> ⚠️ **第一步永远是自检**:`cd scripts && python3 preflight.py`。它会查 config.local.json 建了没、飞书/Shopify 授权就绪没、依赖的 Shopify 应用装了没——**没绿之前别跑后面的脚本**(脚本本身也有守卫,缺 config 会直接拦住并指回这里)。换设备/换人第一件事就是它。
+
 
 **核心模型**:**同事 = 提供者 + 最终确认**;**skill = 专家,把专业活全干**。skill 只在 3 种时候找人:①缺必要输入→提醒补 ②遇决策→让拍板 ③全弄好→**确认上线(唯一的闸,没有独立"审核")**。
 

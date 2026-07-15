@@ -31,7 +31,7 @@ def main():
     ap.add_argument("--limit",type=int,default=0)
     ap.add_argument("--skill-dir",default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     a=ap.parse_args()
-    cfg=_lib.load_config(a.skill_dir); store=cfg["shopify_store"]
+    cfg=_lib.load_config(a.skill_dir); _lib.ensure_ready(cfg); store=cfg["shopify_store"]
     rows=[r for r in _lib.bitable_list(cfg)
           if _lib.cell_text(r["fields"].get("内容审核状态"))==a.status
           and _lib.cell_text(r["fields"].get("Shopify Product ID")).strip()]

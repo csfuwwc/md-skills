@@ -56,7 +56,7 @@ def main():
     ap=argparse.ArgumentParser(); ap.add_argument("--all",action="store_true"); ap.add_argument("--status",default="draft")
     ap.add_argument("--dry-run",action="store_true"); ap.add_argument("--limit",type=int,default=0); ap.add_argument("--skill-dir",default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     a=ap.parse_args()
-    cfg=_lib.load_config(a.skill_dir); store=cfg["shopify_store"]
+    cfg=_lib.load_config(a.skill_dir); _lib.ensure_ready(cfg); store=cfg["shopify_store"]
     q=PROD_Q % ("" if a.all else f"status:{a.status}")
     # 拉全部商品(分页)
     nodes=[]; cursor=None
