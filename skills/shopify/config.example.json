@@ -3,11 +3,46 @@
   "shopify_store": "qs0nxk-ft.myshopify.com",
   "primary_domain": "www.funcinating.com",
   "live_theme_id": "160040780031",
-  "languages": { "primary": "en", "alternates": ["zh-CN", "zh-TW", "th", "es"] },
-  "dnt_names": ["Funcinating", "范趣町", "Modian", "GISMOW", "TARTI", "CALOR", "KOUCOMI", "CHUANGASIA"],
+  "languages": {
+    "primary": "en",
+    "alternates": [
+      "zh-CN",
+      "zh-TW",
+      "th",
+      "es"
+    ]
+  },
+  "dnt_names": [
+    "Funcinating",
+    "范趣町",
+    "Modian",
+    "GISMOW",
+    "TARTI",
+    "CALOR",
+    "KOUCOMI",
+    "CHUANGASIA"
+  ],
   "feishu": {
     "app_token": "SET_IN_config.local.json",
     "table_id": "SET_IN_config.local.json",
     "profile": "personal-li-shoushou"
+  },
+  "collections": {
+    "ip": [
+      "gismow",
+      "tarti",
+      "calor",
+      "koucomi"
+    ],
+    "category": [
+      "blind-box",
+      "plush",
+      "vinyl-figures",
+      "bag-charms"
+    ],
+    "scenario": [
+      "gifts-under-30",
+      "desk-companions"
+    ]
   }
 }

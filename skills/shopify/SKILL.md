@@ -36,9 +36,10 @@ compatibility: any-agent
 
 ---
 
-## 步骤 1 · `sync-pull`(拉草稿进表)
+## 步骤 1 · `sync-pull`(拉草稿进表)· ✅ 已脚本化
+- **跑法**:`cd scripts && python3 sync_pull.py [--all | --status draft] [--dry-run] [--limit N]`(默认只拉 draft;`--dry-run` 只看计划不写)。已验证:按 Product ID 幂等 upsert、镜像总刷、内容仅填空、URL 字段 `{link,text}`、多选/数字/日期类型感知、集合归属自动归类(config.collections)。
 - **触发**:同事建好草稿后 / 定期。**纯读 Shopify,不回写。**
-- **做**:
+- **逻辑**:
   1. GraphQL 拉商品(默认 `query:"status:draft"`,可指定/全量):`id handle title descriptionHtml vendor productType tags status category{fullName} seo{title description} options{name values} variants(first:100){edges{node{sku title price inventoryQuantity}}} media featuredImage{url altText} collections(first:20){edges{node{handle title}}} metafields(first:50){edges{node{namespace key type value}}}`。用 `--output-file` 落 JSON(ANSI 会污染多字节)。
   2. 按 **Shopify Product ID** upsert 进飞书表(`lark-cli base +record-upsert` 或 `api ...records/batch_update`),有则更新①镜像、无则新建行。
   3. ②内容字段**仅填空、不覆盖**(不动运营已优化的)。
