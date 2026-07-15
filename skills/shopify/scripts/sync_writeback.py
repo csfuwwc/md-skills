@@ -61,8 +61,15 @@ def main():
             v=_lib.cell_text(F.get(col)).strip()
             if v and v!=(curmf.get(f"{ns}.{key}") or "").strip():
                 mfs.append({"ownerId":pid,"namespace":ns,"key":key,"type":typ,"value":v})
+        # 上架:DRAFT->ACTIVE
+        if cur.get("status")!="ACTIVE": pin["status"]="ACTIVE"; changed.append("status:ACTIVE")
+        # 集合归属(读表的目标集合 -> collectionAddProducts)
+        want_cols=[]
+        for cc in ["目标IP集合","目标品类集合","目标场景集合"]:
+            v=F.get(cc)
+            if isinstance(v,list): want_cols+=[x.get("text",x.get("name","")) if isinstance(x,dict) else str(x) for x in v]
         title=_lib.cell_text(F.get("商品名称"))[:40]
-        if not changed and not mfs:
+        if len(pin)<=1 and not mfs and not want_cols:
             print(f"  · {title}: 无变化,跳过"); continue
         print(f"  ✎ {title}: productUpdate={changed} · metafields={[m['key'] for m in mfs]}")
         if a.dry_run: continue
@@ -75,6 +82,14 @@ def main():
             r2=_lib.shopify("mutation($m:[MetafieldsSetInput!]!){ metafieldsSet(metafields:$m){ userErrors{field message} } }", store, {"m":mfs}, allow_mutations=True)
             ue=r2["metafieldsSet"]["userErrors"]
             if ue: print("    ⚠️metafieldsSet err:",ue)
+        # 集合归属
+        for h in want_cols:
+            cd=_lib.shopify("query($h:String!){ collectionByHandle(handle:$h){ id } }", store, {"h":h})
+            cid=(cd.get("collectionByHandle") or {}).get("id")
+            if cid:
+                rc=_lib.shopify("mutation($id:ID!,$p:[ID!]!){ collectionAddProducts(id:$id, productIds:$p){ userErrors{message} } }", store, {"id":cid,"p":[pid]}, allow_mutations=True)
+                ue=rc["collectionAddProducts"]["userErrors"]
+                if ue and "automated" not in str(ue).lower(): print(f"    ⚠️集合{h}:",ue)
         # 闭环:回填飞书状态
         app=cfg["feishu"]["app_token"];tbl=cfg["feishu"]["table_id"];prof=cfg["feishu"]["profile"]
         upd={"records":[{"record_id":r["record_id"],"fields":{

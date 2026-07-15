@@ -68,7 +68,7 @@ compatibility: any-agent
 - **责任**:skill 翻;术语问同事。
 
 ## 步骤 5 · `confirm-publish`(自检→同事确认→写回+上架+索引)· ✅ 写回已脚本化
-- **跑法**:`python3 scripts/sync_writeback.py [--dry-run]`(写回「待确认上线」行:productUpdate 标题/描述/SEO + metafieldsSet custom.* + 字段级 diff + handle 不写回 → 回填状态=已上线)。★运行=同事「确认上线」★。v1 范围:EN+metafield;集合归属/多语言写回=v1.1。索引提交仍手动/待补。
+- **跑法**:`python3 scripts/sync_writeback.py [--dry-run]`(写回「待确认上线」行:productUpdate 标题/描述/SEO + metafieldsSet custom.* + 字段级 diff + handle 不写回 + **DRAFT→ACTIVE 上架** + **集合归属 collectionAddProducts** → 回填状态=已上线·写回状态·时间)。★运行本脚本=同事「确认上线」闸★。已 E2E 验证(造真草稿跑通 pull→audit→writeback→ACTIVE+集合+闭环,测后清理)。多语言写回=product-translate 步骤;GSC 索引提交仍手动/待补。
 - **触发**:状态=待确认上线。
 - **做**:① **自检**:必填齐 · faq 合法 json · SEO 长度 · DNT · 无 `$` · **正式列非空(★FAQ 坑:内容别只在草稿列★)** · handle 英文 ② 出「上线预检报告」③ **同事确认上线(唯一的闸)** ④ 写回 Shopify:`productUpdate`(标题/描述/seo/tags/type)+ `metafieldsSet`(custom.* + `_<lang>`)+ `translationsRegister`(各语言)+ 集合归属;**字段级 diff**(只写与线上不同的)⑤ 商品转 Active ⑥ GSC 提交索引 ⑦ 回填 `写回状态/时间`·`索引状态`·状态=`已上线`。
 - **铁律**:只写同事确认的 · **handle 不写回**(改动走手动 + 301)· **正式列空不写上线** · 失败逐行记 `写回错误` 不中断 · **加商品不用 theme publish**(动主题代码才要)。
