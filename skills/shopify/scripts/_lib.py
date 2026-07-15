@@ -1,6 +1,6 @@
 """shopify skill 共享库:配置加载 + Shopify GraphQL + 飞书 bitable 封装。
    token 绝不写死:Shopify 走 `shopify store execute` 自带鉴权,飞书走 lark-cli --profile(keychain)。"""
-import json, subprocess, os, re, tempfile
+import json, subprocess, os, re, tempfile, time
 
 def load_config(skill_dir=None):
     d = skill_dir or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # scripts/ 的父 = skill 根(config 在此)
@@ -23,7 +23,7 @@ def shopify(query, store, variables=None, allow_mutations=False):
         qf = os.path.join(t, "q.graphql"); of = os.path.join(t, "o.json")
         open(qf, "w").write(query)
         cmd = ["shopify","store","execute","-s",store,"-j","--query-file",qf,"--output-file",of]
-        if allow_mutations: cmd.insert(4, "--allow-mutations")
+        if allow_mutations: cmd.append("--allow-mutations")
         if variables:
             vf = os.path.join(t, "v.json"); open(vf,"w").write(json.dumps(variables)); cmd += ["--variable-file", vf]
         subprocess.run(cmd, capture_output=True, text=True)
@@ -43,9 +43,13 @@ def lark_post(path, data_obj, profile):
     p=f"_larkpost_{uuid.uuid4().hex[:8]}.json"   # cwd 内相对路径
     with open(p,"w",encoding="utf-8") as f: json.dump(data_obj, f, ensure_ascii=False)
     try:
-        r=subprocess.run(["lark-cli","api","POST",path,"--data","@"+p,"--profile",profile,"--as","user"], capture_output=True, text=True)
-        out=r.stdout+r.stderr; i=out.find("{")
-        return json.loads(out[i:]) if i>=0 else {}
+        for attempt in range(2):
+            r=subprocess.run(["lark-cli","api","POST",path,"--data","@"+p,"--profile",profile,"--as","user"], capture_output=True, text=True)
+            out=r.stdout+r.stderr; i=out.find("{")
+            d=json.loads(out[i:]) if i>=0 else {}
+            if d.get("code")==0 or d.get("ok") is True: return d   # 成功
+            if attempt==0: time.sleep(1); continue                 # 偶发失败重试一次
+            return d
     finally:
         if os.path.exists(p): os.unlink(p)
 

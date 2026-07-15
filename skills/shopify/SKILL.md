@@ -48,7 +48,8 @@ compatibility: any-agent
 - **铁律**:幂等键=Product ID(绝不重复行)· 内容字段绝不覆盖非空 · handle 只镜像不回写 · 逐商品失败记录不中断。
 - **验收**:每草稿一行,镜像齐、集合有、状态=待补素材,抽验与 Shopify 一致。
 
-## 步骤 2 · `product-audit`(核查缺啥,只提醒「硬缺」)
+## 步骤 2 · `product-audit`(核查缺啥,只提醒「硬缺」)· ✅ 已脚本化
+- **跑法**:`python3 scripts/audit.py`(核查「待补素材」行的硬缺,输出补充清单;软缺不烦同事)。
 - **触发**:状态=待补素材的行。
 - **做**:逐行核查必填。分 **硬缺**(只有同事能给:材质/尺寸/隐藏款概率[仅盲盒]/系列/IP/官方依据/主图)vs **软缺**(skill 能生成:SEO/关键词/FAQ/scenario/集合)。硬缺→生成补充清单提醒同事;软缺不烦他。硬缺齐→可进 optimize。
 - **铁律**:只提醒「人才能提供的」;skill 能做的绝不甩给同事。
@@ -66,7 +67,8 @@ compatibility: any-agent
 - **铁律**:DNT/handle 不译 · **各语言共用英文 handle** · 非美元语言无 `$` · 功能词本地化 · **主题 UI 译文必须进 `locales/<lang>.json` 文件(release 会冲掉 API override)** · 上线后 **`theme publish` 清缓存**(`push` 不清)。深挖见飞书手册。
 - **责任**:skill 翻;术语问同事。
 
-## 步骤 5 · `confirm-publish`(自检→同事确认→写回+上架+索引)
+## 步骤 5 · `confirm-publish`(自检→同事确认→写回+上架+索引)· ✅ 写回已脚本化
+- **跑法**:`python3 scripts/sync_writeback.py [--dry-run]`(写回「待确认上线」行:productUpdate 标题/描述/SEO + metafieldsSet custom.* + 字段级 diff + handle 不写回 → 回填状态=已上线)。★运行=同事「确认上线」★。v1 范围:EN+metafield;集合归属/多语言写回=v1.1。索引提交仍手动/待补。
 - **触发**:状态=待确认上线。
 - **做**:① **自检**:必填齐 · faq 合法 json · SEO 长度 · DNT · 无 `$` · **正式列非空(★FAQ 坑:内容别只在草稿列★)** · handle 英文 ② 出「上线预检报告」③ **同事确认上线(唯一的闸)** ④ 写回 Shopify:`productUpdate`(标题/描述/seo/tags/type)+ `metafieldsSet`(custom.* + `_<lang>`)+ `translationsRegister`(各语言)+ 集合归属;**字段级 diff**(只写与线上不同的)⑤ 商品转 Active ⑥ GSC 提交索引 ⑦ 回填 `写回状态/时间`·`索引状态`·状态=`已上线`。
 - **铁律**:只写同事确认的 · **handle 不写回**(改动走手动 + 301)· **正式列空不写上线** · 失败逐行记 `写回错误` 不中断 · **加商品不用 theme publish**(动主题代码才要)。
