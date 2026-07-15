@@ -67,3 +67,48 @@ ENTITIES = {
  "collection":{"query":COLLECTION_QUERY,"build":build_collection,"key":"Collection ID",
                "status":"内容审核状态", "date":"最近同步日期", "supports_query":False},
 }
+
+# ---------- 写回规格(sync_writeback 用)----------
+PRODUCT_WB = {
+ "cur_query":"""query($id:ID!){ product(id:$id){ title descriptionHtml productType tags status seo{title description}
+   metafields(first:60){ edges{ node{ namespace key value } } } collections(first:30){edges{node{handle}}} } }""",
+ "cur_key":"product",
+ "update_mutation":"mutation($p:ProductInput!){ productUpdate(input:$p){ userErrors{field message} } }",
+ "input_type":"ProductInput",
+ "pu_map":{"商品名称":"title","商品描述EN":"descriptionHtml"},
+ "seo_map":{"SEO Title EN":"title","SEO描述EN":"description"},
+ "tags_field":"Tags|标签",
+ "mf_map":{"custom.material 材质":("custom","material","single_line_text_field"),
+   "custom.height_cm 高度":("custom","height_cm","single_line_text_field"),
+   "custom.box_size_cm 单盒尺寸：长|宽|高":("custom","box_size","single_line_text_field"),
+   "custom.hidden_odds 隐藏款概率":("custom","hidden_odds","single_line_text_field"),
+   "custom.series 系列":("custom","series","single_line_text_field"),
+   "custom.scenario_copy 场景文案":("custom","scenario_copy","multi_line_text_field"),
+   "custom.faq 常见问题":("custom","faq","json")},
+ "activate":True,
+ "target_collections":["目标IP集合","目标品类集合","目标场景集合"],
+ "title_field":"商品名称",
+}
+COLLECTION_WB = {
+ "cur_query":"""query($id:ID!){ collection(id:$id){ title descriptionHtml seo{title description}
+   metafields(first:30){ edges{ node{ namespace key value } } } } }""",
+ "cur_key":"collection",
+ "update_mutation":"mutation($p:CollectionInput!){ collectionUpdate(input:$p){ userErrors{field message} } }",
+ "input_type":"CollectionInput",
+ "pu_map":{"集合名称":"title","集合描述EN":"descriptionHtml"},
+ "seo_map":{"SEO Title EN":"title","SEO描述EN":"description"},
+ "tags_field":None,
+ "mf_map":{"editorial_body EN":("custom","editorial_body","rich_text_field"),
+   "FAQ EN":("custom","faq","json"),
+   "IP卡_badge EN":("funcinating","homepage_badge","single_line_text_field"),
+   "IP卡_tagline EN":("funcinating","homepage_tagline","single_line_text_field"),
+   "IP卡_summary EN":("funcinating","homepage_summary","multi_line_text_field"),
+   "IP卡_chips EN":("funcinating","homepage_chips","list.single_line_text_field")},
+ "activate":False,
+ "target_collections":[],
+ "title_field":"集合名称",
+}
+ENTITIES["product"]["hard"]=["商品名称","商品描述EN","主图URL","IP|角色","custom.material 材质","custom.series 系列","custom.box_size_cm 单盒尺寸：长|宽|高","custom.height_cm 高度","资料来源|官方依据"]
+ENTITIES["collection"]["hard"]=["集合名称","集合描述EN","editorial_body EN","FAQ EN"]
+ENTITIES["product"]["wb"]=PRODUCT_WB
+ENTITIES["collection"]["wb"]=COLLECTION_WB
