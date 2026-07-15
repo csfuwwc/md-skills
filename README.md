@@ -18,6 +18,7 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | [humanizer](skills/humanizer/) | 去除英文文本的 AI 写作痕迹（基于维基百科 Signs of AI writing） |
 | [humanizer-zh](skills/humanizer-zh/) | 去除中文文本的 AI 味/翻译腔（humanizer 中文版） |
 | [funcinating-news](skills/funcinating-news/) | 基于新闻/话题生成 Funcinating 双语资讯（查证事实→五拍骨架→去AI味→发布到 Shopify news） |
+| [shopify](skills/shopify/) | Shopify 独立站商品上架流水线（同事提供素材，skill 全包 SEO/handle/metafield/FAQ/集合/多语言/写回上架；5 步·去审核·飞书表 SSOT） |
 
 ## 安装
 
