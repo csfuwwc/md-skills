@@ -175,3 +175,18 @@ ENTITIES["product"]["hard"]=["商品名称","商品描述EN","主图URL","IP|角
 ENTITIES["collection"]["hard"]=["集合名称","集合描述EN","editorial_body EN","FAQ EN"]
 ENTITIES["product"]["wb"]=PRODUCT_WB
 ENTITIES["collection"]["wb"]=COLLECTION_WB
+
+
+# ---------- 需按语言建 _<lang> 变体的 metafield(json/rich_text 不走标准翻译)----------
+ML_METAFIELDS = {
+ "product":   [("custom","scenario_copy","multi_line_text_field"),("custom","faq","json")],
+ "collection":[("custom","editorial_body","rich_text_field"),("custom","faq","json"),
+               ("funcinating","homepage_badge","single_line_text_field"),
+               ("funcinating","homepage_tagline","single_line_text_field"),
+               ("funcinating","homepage_summary","multi_line_text_field"),
+               ("funcinating","homepage_chips","list.single_line_text_field")],
+ "article":[], "page":[],
+}
+# lang -> metafield key 后缀(承接现有:_th/_es/_zh)
+LANG_SUFFIX = {"es":"es","th":"th","zh-CN":"zh","zh-TW":"zh_tw"}
+RES_LIST = {"product":"products","collection":"collections"}

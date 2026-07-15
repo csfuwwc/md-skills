@@ -8,6 +8,7 @@
 import sys, os, json, argparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _lib
+from entities import ML_METAFIELDS, LANG_SUFFIX, RES_LIST
 
 RES_TYPE={"product":"PRODUCT","collection":"COLLECTION","article":"ARTICLE","page":"PAGE"}
 TR_KEYS={"product":{"title","body_html","meta_title","meta_description"},
@@ -46,15 +47,49 @@ def imp(cfg, entity, lang, inp):
     print(f"注册 {lang} 译文 {ok} 字段,错误 {len(errs)}")
     for e in errs[:5]: print("  ",e)
 
+
+def export_mf(cfg, entity, lang, out):
+    store=cfg["shopify_store"]; mfs=ML_METAFIELDS.get(entity,[])
+    if not mfs: print(f"{entity} 无需 _<lang> metafield 变体"); return
+    if entity not in RES_LIST: print(f"{entity} 暂不支持 metafield 变体"); return
+    suf=LANG_SUFFIX.get(lang, lang.lower().replace("-",""))
+    sel=" ".join(f'm{i}:metafield(namespace:"{ns}",key:"{k}"){{ value }}' for i,(ns,k,ty) in enumerate(mfs))
+    q='{ %s(first:60){ edges{ node{ id %s } } } }'%(RES_LIST[entity], sel)
+    d=_lib.shopify(q, store); rows=[]
+    for e in d[RES_LIST[entity]]["edges"]:
+        n=e["node"]
+        for i,(ns,k,ty) in enumerate(mfs):
+            v=(n.get(f"m{i}") or {}).get("value")
+            if v and str(v).strip():
+                rows.append({"ownerId":n["id"],"namespace":ns,"key":f"{k}_{suf}","type":ty,"base":v,"target":""})
+    json.dump(rows, open(out,"w"), ensure_ascii=False, indent=1)
+    print(f"导出 {entity} 的 _<{suf}> metafield 变体 {len(rows)} 个 → {out}")
+    print(f"→ agent 翻译每个 'target'(rich_text/json 保结构、只翻可见文字;DNT不译),再 --import-mf")
+
+def import_mf(cfg, lang, inp):
+    store=cfg["shopify_store"]; rows=json.load(open(inp))
+    mset=[{"ownerId":r["ownerId"],"namespace":r["namespace"],"key":r["key"],"type":r["type"],"value":r["target"]}
+          for r in rows if r.get("target","").strip()]
+    ok=0; errs=[]
+    for i in range(0,len(mset),25):
+        r=_lib.shopify("mutation($m:[MetafieldsSetInput!]!){ metafieldsSet(metafields:$m){ metafields{id} userErrors{field message} } }",
+            store, {"m":mset[i:i+25]}, allow_mutations=True)
+        rr=r["metafieldsSet"]; errs+=rr["userErrors"]; ok+=len(rr.get("metafields",[]) or [])
+    print(f"写入 _<lang> metafield 变体 {ok} 个,错误 {len(errs)}")
+    for e in errs[:5]: print("  ",e)
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--entity",required=True,choices=list(RES_TYPE.keys()))
     ap.add_argument("--lang",required=True)  # zh-CN/zh-TW/th/es
     ap.add_argument("--export"); ap.add_argument("--import",dest="imp")
+    ap.add_argument("--export-mf"); ap.add_argument("--import-mf",dest="impmf"); ap.add_argument("--metafields",action="store_true")
     ap.add_argument("--skill-dir",default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     a=ap.parse_args()
     cfg=_lib.load_config(a.skill_dir); _lib.ensure_ready(cfg)
     if a.export: export(cfg,a.entity,a.lang,a.export)
     elif a.imp: imp(cfg,a.entity,a.lang,a.imp)
-    else: print("需 --export FILE 或 --import FILE")
+    elif a.export_mf: export_mf(cfg,a.entity,a.lang,a.export_mf)
+    elif a.impmf: import_mf(cfg,a.lang,a.impmf)
+    else: print("需 --export/-mf 或 --import/-mf FILE")
 if __name__=="__main__": main()

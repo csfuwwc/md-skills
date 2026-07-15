@@ -74,7 +74,10 @@ compatibility: any-agent
 - **铁律**:DNT(config.dnt_names 不译)· handle 英文不译 · faq 合法 json · **非美元语言不出现 `$`**(平价框架)· 去 AI 味 · **拍板项一次问、别碎问**。
 - **责任**:skill 生成;同事只拍板。
 
-## 步骤 4 · `product-translate`(多语言,承接《多语言适配指南》)
+## 步骤 4 · `product-translate`(多语言,承接《多语言适配指南》)· ✅ 已脚本化(两模式)
+- **跑法(两套内容,机械 bookends,中间 agent 翻)**:
+  - **标准可翻译内容**(title/描述/SEO):`translate.py --entity <e> --lang <l> --export out.json` 拉 EN+digest → agent 逐条填 `target` → `--import out.json` 走 `translationsRegister` 回。
+  - **`_<lang>` metafield 变体**(json/rich_text 不走标准翻译):`translate.py --entity <e> --lang <l> --export-mf mf.json` 拉 scenario_copy/faq(商品)、editorial_body/faq/homepage_*(集合)的 EN 基线 → agent 保结构翻 → `--import-mf mf.json` 走 `metafieldsSet` 写 `<key>_<lang>`(后缀见 entities.LANG_SUFFIX:es/th/zh/zh_tw)。已 E2E 验证(ZZ 测试 key 写→查→删零残留)。
 - **触发**:EN 基线定后(可与步骤 3 并行)。目标语言 = config.languages.alternates。
 - **做**:从 EN 翻 title/描述/SEO → 各语言;`_<lang>` metafield 变体(scenario_copy/faq);术语拍板(如 charm→llavero)问一次。zh-TW/th/es 批量翻,zh-CN 可同事原创。
 - **铁律**:DNT/handle 不译 · **各语言共用英文 handle** · 非美元语言无 `$` · 功能词本地化 · **主题 UI 译文必须进 `locales/<lang>.json` 文件(release 会冲掉 API override)** · 上线后 **`theme publish` 清缓存**(`push` 不清)。深挖见飞书手册。
