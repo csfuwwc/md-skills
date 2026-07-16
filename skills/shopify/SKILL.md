@@ -9,6 +9,7 @@ description: |
   与 humanizer / humanizer-zh 组合。★用前必跑 `scripts/preflight.py` 自检(config/授权/依赖应用),缺就按提示补★。业务标识读 config;token 走 keychain/.env.local 不写死。
 license: MIT
 compatibility: any-agent
+requires_skills: humanizer, humanizer-zh
 ---
 
 # shopify:独立站商品上架流水线

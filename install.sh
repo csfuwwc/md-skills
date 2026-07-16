@@ -20,7 +20,7 @@ set -euo pipefail
 REPO_OWNER="${MD_SKILLS_OWNER:-csfuwwc}"
 REPO_NAME="${MD_SKILLS_REPO:-md-skills}"
 BRANCH="${MD_SKILLS_BRANCH:-main}"
-SKILLS_DIR="$HOME/.cursor/skills"
+SKILLS_DIR="${MD_SKILLS_DIR:-$HOME/.cursor/skills}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -199,9 +199,33 @@ install_remote() {
 
 # ── 安装后处理 ───────────────────────────────────────────
 
+# ── 依赖 skill:读 SKILL.md frontmatter 的 requires_skills,自动装 ──
+install_skill_deps() {
+    local dest="$1"
+    [[ -f "$dest/SKILL.md" ]] || return 0
+    local deps
+    deps=$(grep -m1 -iE '^requires_skills:' "$dest/SKILL.md" \
+        | sed -E 's/^[Rr]equires_skills:[[:space:]]*//; s/[][]//g; s/,/ /g')
+    [[ -n "${deps// /}" ]] || return 0
+    info "检测到依赖 skill:$deps"
+    for dep in $deps; do
+        dep="$(echo "$dep" | xargs)"
+        [[ -n "$dep" ]] || continue
+        if [[ -d "$SKILLS_DIR/$dep" ]]; then
+            ok "依赖 '$dep' 已安装,跳过"
+            continue
+        fi
+        info "安装依赖 skill '$dep'..."
+        if is_local; then install_local "$dep"; else install_remote "$dep"; fi
+    done
+}
+
 post_install() {
     local skill_name="$1"
     local dest="$SKILLS_DIR/$skill_name"
+
+    # 先装依赖 skill(如 humanizer / humanizer-zh)
+    install_skill_deps "$dest"
 
     # 检查是否有 requirements.txt
     if [[ -f "$dest/requirements.txt" ]]; then

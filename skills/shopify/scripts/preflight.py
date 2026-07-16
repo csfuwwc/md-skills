@@ -62,6 +62,14 @@ def main():
             if not ld_ok:  print("❌ 主题模块:theme.locales_dir 不存在 → 指向前端仓主题 locales 目录(locale_check 用)")
     else:
         print("· 主题/前端模块:未选(纯 Shopify 后台无需 fe-www;做主题UI多语言时加 --modules core,theme)")
+    # 4b 依赖 skill(去AI味,optimize/翻译步骤用)——装在 shopify 同级目录
+    skills_root = os.path.dirname(a.skill_dir)
+    for dep in ["humanizer", "humanizer-zh"]:
+        present = os.path.isdir(os.path.join(skills_root, dep))
+        if present:
+            print(f"✅ 依赖 skill {dep}:已装")
+        else:
+            print(f"⚠️ 依赖 skill {dep}:未装 → install.sh {dep}(optimize 去AI味用;install.sh 装 shopify 时本应自动带上)")
     # 5 Shopify 应用(用户确认——API 查不到)
     print("\n─── 请确认以下 Shopify 应用已安装(后台 API 查不到,需你确认)───")
     for app in cfg.get("required_apps",[]):
