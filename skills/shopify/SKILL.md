@@ -74,6 +74,12 @@ compatibility: any-agent
 - **铁律**:DNT(config.dnt_names 不译)· handle 英文不译 · faq 合法 json · **非美元语言不出现 `$`**(平价框架)· 去 AI 味 · **拍板项一次问、别碎问**。
 - **责任**:skill 生成;同事只拍板。
 
+## 步骤 3.5 · `image-optimize`(正文图尺寸优化)· ✅ 已脚本化
+- **跑法**:`python3 image_optimize.py --dry-run`(预览)→ `--apply`(写回)。`--handle <h>` 限单品;`--width 1600` 兜底封顶;`--no-srcset`/`--no-lazy` 退化。
+- **解决**:商品描述 HTML 里的 `<img>` 常是原图直出(几 MB/张),浏览器为显示 ~750px 的图下载整张。改写正文 `<img>`:**src 加 `?width=` 封顶 + srcset 响应式 + `loading=lazy`**——手机单页正文图 ↓~45%,且懒加载让正文图不拖首屏 LCP。**纯改 descriptionHtml(productUpdate),不动 media/不重传,去 width 参数即回退。**
+- **触发**:上架前 / 批量优化老商品。**图片复用**:先查是否有跨商品字节相同的图(content-length+md5),有才复用 URL、无则不折腾(art-toy 站多为专属图,常 0 命中)。
+- **铁律**:只改 cdn.shopify.com 且未封顶的 `<img>`;已带 `width=` 的跳过(幂等);主图廊(media)归主题响应式、本步不碰。
+
 ## 步骤 4 · `product-translate`(多语言,承接《多语言适配指南》)· ✅ 已脚本化(两模式)
 - **跑法(两套内容,机械 bookends,中间 agent 翻)**:
   - **标准可翻译内容**(title/描述/SEO):`translate.py --entity <e> --lang <l> --export out.json` 拉 EN+digest → agent 逐条填 `target` → `--import out.json` 走 `translationsRegister` 回。
