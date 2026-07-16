@@ -79,7 +79,7 @@ compatibility: any-agent
   - **标准可翻译内容**(title/描述/SEO):`translate.py --entity <e> --lang <l> --export out.json` 拉 EN+digest → agent 逐条填 `target` → `--import out.json` 走 `translationsRegister` 回。
   - **`_<lang>` metafield 变体**(json/rich_text 不走标准翻译):`translate.py --entity <e> --lang <l> --export-mf mf.json` 拉 scenario_copy/faq(商品)、editorial_body/faq/homepage_*(集合)的 EN 基线 → agent 保结构翻 → `--import-mf mf.json` 走 `metafieldsSet` 写 `<key>_<lang>`(后缀见 entities.LANG_SUFFIX:es/th/zh/zh_tw)。已 E2E 验证(ZZ 测试 key 写→查→删零残留)。
 - **上线前两道自检(踩过的坑,务必跑)**:
-  - ★**主题 UI 完整性**:`python3 locale_check.py --lang <l>`——比对 `locales/en.default.json` vs `<l>.json`,揪出**缺失/还是英文的主题串**(筛选条 All/HOT/NEW、角标、header/footer/blog、aria)。★**新语言最爱漏这个,店面半英半外自己看不出**★。`--out gaps.json` 导缺口给 agent 翻,合并回 `<l>.json` 再 `theme publish`。目录=config.theme.locales_dir。
+  - ★**主题 UI 完整性**:`python3 locale_check.py --pull --lang <l>`——**`--pull` 从 live 主题实拉 locale 再比**(★必须用线上真值:本地 checkout 会落后于线上、产生几百条假缺口,别信★)。揪出**缺失/还是英文的主题串**(筛选条 All/HOT/NEW、角标、header/footer/blog、aria)。★新语言最爱漏这个,店面半英半外自己看不出★。`--out gaps.json` 导缺口给 agent 翻,合并回 `<l>.json` 再 `theme publish`。DNT 专名自动过滤;剩「疑似」含同形词(Material/SKU/Global)需复核。
   - **market 启用**:`python3 translate.py --lang <l> --market-check`——**内容翻好了还得在 market 启用+发布该语言**,否则前台根本不显示(翻完纳闷「怎么没变」的坑)。
 - **触发**:EN 基线定后(可与步骤 3 并行)。目标语言 = config.languages.alternates。
 - **做**:从 EN 翻 title/描述/SEO → 各语言;`_<lang>` metafield 变体(scenario_copy/faq);**主题 UI 串(locale_check 揪出的)**;术语拍板(如 charm→llavero)问一次。zh-TW/th/es 批量翻,zh-CN 可同事原创。
