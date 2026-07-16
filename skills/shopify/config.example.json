@@ -46,9 +46,9 @@
     ]
   },
   "theme": {
+    "_comment": "★可选·指向前端主题仓(非 Shopify 后台)★ 只有 locale_check.py(查主题UI译文)和步骤4主题 pull/publish 用到;product/collection/article/page 全流程+内容翻译+图片+巡检都不需要。不做主题UI多语言可整块留空。各机路径不同,需改成你本机的 fe-www 主题 checkout 路径。",
     "env_local_path": "~/fe-www.funcinating.com-next/.env.local",
-    "locales_dir": "~/fe-www.funcinating.com-next/shopify-theme-funcinating-live/locales",
-    "_comment": "仅步骤4多语言/主题改动需要;含 SHOPIFY_CLI_THEME_TOKEN/LIVE_THEME_ID;locales_dir=主题checkout的locales目录(locale_check.py用,各机路径不同、本地可覆盖)"
+    "locales_dir": "~/fe-www.funcinating.com-next/shopify-theme-funcinating-live/locales"
   },
   "required_apps": [
     {
