@@ -7,9 +7,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _lib
 
 def main():
-    print("═══ Shopify 流水线 · 初始化自检 ═══\n")
     ap=argparse.ArgumentParser(); ap.add_argument("--skill-dir",default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    ap.add_argument("--modules", default="core",
+                    help="要用的能力模块:core(Shopify后台内容,默认) · theme(主题UI多语言/代码侧,需前端仓) · 逗号分隔,如 core,theme")
     a=ap.parse_args()
+    modules = {m.strip() for m in a.modules.split(",") if m.strip()} | {"core"}
+    print("═══ Shopify 流水线 · 初始化自检 ═══")
+    print(f"选定模块:{'、'.join(sorted(modules))}"
+          + ("" if "theme" in modules else "  (纯 Shopify 后台;要做主题UI多语言加 --modules core,theme)") + "\n")
     ok=True
     cfg=_lib.load_config(a.skill_dir)
     # 1 config.local.json
@@ -42,13 +47,21 @@ def main():
         print(f"✅ Shopify 授权:可连({d['productsCount']['count']} 商品)")
     except Exception:
         ok=False; print("❌ Shopify 未连 → 装 shopify CLI 并 `shopify auth`/配置 store execute 凭证")
-    # 4 主题访问(可选,步骤4)
-    envp=os.path.expanduser((cfg.get("theme") or {}).get("env_local_path",""))
-    if envp and os.path.exists(envp):
-        has=any("THEME_TOKEN" in l for l in open(envp))
-        print(f"{'✅' if has else '⚠️'} 主题访问:.env.local {'含 THEME_TOKEN' if has else '缺 THEME_TOKEN'}(仅步骤4多语言/改主题需要)")
+    # 4 主题/前端模块(代码侧)——仅当选了 theme 模块才作硬性要求;否则纯后台不检查
+    if "theme" in modules:
+        th=cfg.get("theme") or {}
+        envp=os.path.expanduser(th.get("env_local_path",""))
+        ldir=os.path.expanduser(th.get("locales_dir",""))
+        env_ok=bool(envp) and os.path.exists(envp) and any("THEME_TOKEN" in l for l in open(envp))
+        ld_ok=bool(ldir) and os.path.isdir(ldir)
+        if env_ok and ld_ok:
+            print("✅ 主题模块:.env.local 含 THEME_TOKEN · locales_dir 就绪")
+        else:
+            ok=False
+            if not env_ok: print("❌ 主题模块:theme.env_local_path 缺失/无 THEME_TOKEN → 指向你本机 fe-www 前端仓的 .env.local")
+            if not ld_ok:  print("❌ 主题模块:theme.locales_dir 不存在 → 指向前端仓主题 locales 目录(locale_check 用)")
     else:
-        print("⚠️ 主题访问:.env.local 未找到(仅步骤4多语言/改主题需要;纯商品上架不需要)")
+        print("· 主题/前端模块:未选(纯 Shopify 后台无需 fe-www;做主题UI多语言时加 --modules core,theme)")
     # 5 Shopify 应用(用户确认——API 查不到)
     print("\n─── 请确认以下 Shopify 应用已安装(后台 API 查不到,需你确认)───")
     for app in cfg.get("required_apps",[]):

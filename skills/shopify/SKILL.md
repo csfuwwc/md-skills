@@ -34,8 +34,11 @@ compatibility: any-agent
 - 所有脚本都接 `--entity`:`sync_pull.py --entity collection` / `audit.py --entity article` / `sync_writeback.py --entity collection`。默认 product。
 
 ## 步骤 0 · `preflight`(初始化自检)· ✅ 已脚本化 —— **每次上手先跑**
-- **跑法**:`cd scripts && python3 preflight.py`
-- **查什么**:①`config.local.json` 是否建好并填了 feishu 表标识 ②飞书授权(能否读表)③Shopify 授权(能否连店)④主题访问(`.env.local` 含 THEME_TOKEN,仅步骤4/改主题需要)⑤**列出流水线依赖的 Shopify 应用清单让你确认已装**(如 Translate & Adapt;后台 API 查不到、须人工确认,配 `config.required_apps`)。
+- **★先问用户要哪些能力模块(onboarding 策略)★**:并非人人都动代码侧。上手时 agent **先问**:「你只做 **Shopify 后台内容**(商品/集合/文章/页面/翻译/图片/巡检),还是**也做主题 UI 多语言/前端代码侧**?」——按答案决定验哪些、引导填哪些 config,别让只做后台的同事去配前端仓。
+  - **core**(默认,人人要):飞书表 + Shopify 鉴权。
+  - **theme**(可选,代码侧):额外需前端仓 checkout 路径 + THEME_TOKEN(config 的 `theme` 块;不做就整块留空)。
+- **跑法**:纯后台 `python3 preflight.py`;要主题 `python3 preflight.py --modules core,theme`。
+- **查什么**:①`config.local.json` 建好并填了 feishu 表标识 ②**四实体表 table_id 全配**(product/collection/article/page)③飞书授权(能否读表)④Shopify 授权(能否连店)⑤**(选了 theme 才查)** 主题 `.env.local` 含 THEME_TOKEN + `locales_dir` 就绪 ⑥**列出依赖的 Shopify 应用让你确认已装**(如 Translate & Adapt;API 查不到、须人工确认,配 `config.required_apps`)。
 - **缺就提示怎么补**(建 config / 跑 lark-cli auth / 配 shopify 凭证),全 ✅ 才开始 sync_pull。新设备/换人第一件事就跑它。
 
 ## 字段契约(飞书表 59→现 54 字段,4 桶)
