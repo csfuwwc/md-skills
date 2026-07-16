@@ -101,6 +101,11 @@ compatibility: any-agent
 
 ---
 
+## 巡检 · `health`(店铺健康,只读)· ✅ 已脚本化
+- **跑法**:`python3 health.py`(内容)· `python3 health.py --i18n --pull`(加多语言,实拉 live locale)。
+- **用途**:**常态监控,不是补缺口**——每周/每次批量改动后跑,一张报告聚合:商品 SEO/alt/集合归属/滞留草稿/正文图是否已优化 · 集合 SEO/导购正文 · 301 · 各语言 locale 完整性 + market 启用。**全绿 exit 0,有待办 exit 1(可接 CI/定时)。** 只读,不改任何东西。
+- 揪出的每项都指向对应修复脚本(缺翻译→translate、未优化图→image_optimize、locale 残英文→locale_check)。
+
 ## 全局铁律(贴墙)
 1. **token 绝不进文件**——Shopify 走 CLI 鉴权,Feishu 走 keychain profile。
 2. **handle** 永远英文 slug,Shopify 建品时从标题自动生成并冻结;不手打、不翻译、改动补 301。
