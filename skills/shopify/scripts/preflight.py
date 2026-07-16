@@ -34,13 +34,15 @@ def main():
         print(f"❌ 实体表未配全 → {'、'.join(miss_ent) or '(entities 缺失)'}(entities.<实体>.table_id,共需 product/collection/article/page 四张)")
     else:
         print(f"✅ 实体表:{len(ents)} 张全配({'、'.join(ents.keys())})")
-    # 2 飞书授权(读表)
+    # 2 飞书授权(读表)——profile 留空则用 lark-cli 活动 profile(同事自己已登录的飞书)
+    prof=_lib.feishu_profile(cfg)
     if at and "SET_IN" not in at:
         try:
             names=_lib.bitable_field_names(cfg); assert names
-            print(f"✅ 飞书授权:表可读({len(names)} 字段)· profile={cfg['feishu']['profile']}")
+            print(f"✅ 飞书授权:表可读({len(names)} 字段)· profile={prof or 'lark-cli 活动身份'}")
         except Exception:
-            ok=False; print(f"❌ 飞书授权失败 → lark-cli auth login --profile {cfg.get('feishu',{}).get('profile','?')}(需 base 读写权限)")
+            ok=False
+            print(f"❌ 飞书读表失败(profile={prof or '活动身份'})→ 确认 ①lark-cli 已登录你的飞书 ②你账号有该多维表格读写权限(base:record/field)")
     # 3 Shopify 授权
     try:
         d=_lib.shopify("{ productsCount{ count } }", cfg["shopify_store"])

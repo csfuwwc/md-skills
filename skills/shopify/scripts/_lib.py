@@ -31,20 +31,28 @@ def shopify(query, store, variables=None, allow_mutations=False):
         raw = json.load(open(of))
         return raw.get("data", raw)
 
-def _lark(args, profile):
-    r = subprocess.run(["lark-cli"]+args+["--profile",profile,"--as","user"], capture_output=True, text=True)
+def feishu_profile(cfg):
+    """profile 可留空:空=用 lark-cli 当前活动 profile(同事自己已登录的飞书),不必写进 config。"""
+    return (cfg.get("feishu") or {}).get("profile") or None
+
+def _lark(args, profile=None):
+    cmd = ["lark-cli"]+args+["--as","user"]
+    if profile: cmd += ["--profile", profile]   # 留空=用活动 profile
+    r = subprocess.run(cmd, capture_output=True, text=True)
     out = r.stdout + r.stderr
     i = out.find("{")
     return json.loads(out[i:]) if i>=0 else {}
 
-def lark_post(path, data_obj, profile):
+def lark_post(path, data_obj, profile=None):
     """POST body 走 @相对路径临时文件(lark-cli 要求 @file 在当前目录内)。"""
     import uuid
     p=f"_larkpost_{uuid.uuid4().hex[:8]}.json"   # cwd 内相对路径
     with open(p,"w",encoding="utf-8") as f: json.dump(data_obj, f, ensure_ascii=False)
     try:
         for attempt in range(2):
-            r=subprocess.run(["lark-cli","api","POST",path,"--data","@"+p,"--profile",profile,"--as","user"], capture_output=True, text=True)
+            cmd=["lark-cli","api","POST",path,"--data","@"+p,"--as","user"]
+            if profile: cmd += ["--profile", profile]
+            r=subprocess.run(cmd, capture_output=True, text=True)
             out=r.stdout+r.stderr; i=out.find("{")
             d=json.loads(out[i:]) if i>=0 else {}
             if d.get("code")==0 or d.get("ok") is True: return d   # 成功
@@ -55,12 +63,12 @@ def lark_post(path, data_obj, profile):
 
 def bitable_list(cfg):
     """拉全部记录,返回 [{record_id, fields}]。"""
-    app=cfg["feishu"]["app_token"]; tbl=cfg["feishu"]["table_id"]; prof=cfg["feishu"]["profile"]
+    app=cfg["feishu"]["app_token"]; tbl=cfg["feishu"]["table_id"]; prof=feishu_profile(cfg)
     d=_lark(["api","GET",f"/bitable/v1/apps/{app}/tables/{tbl}/records","--params",'{"page_size":200}'], prof)
     return (d.get("data") or {}).get("items") or []
 
 def bitable_field_names(cfg):
-    app=cfg["feishu"]["app_token"]; tbl=cfg["feishu"]["table_id"]; prof=cfg["feishu"]["profile"]
+    app=cfg["feishu"]["app_token"]; tbl=cfg["feishu"]["table_id"]; prof=feishu_profile(cfg)
     d=_lark(["api","GET",f"/bitable/v1/apps/{app}/tables/{tbl}/fields","--params",'{"page_size":200}'], prof)
     return [f["field_name"] for f in (d.get("data") or {}).get("items", [])]
 

@@ -23,9 +23,10 @@
     "CHUANGASIA"
   ],
   "feishu": {
+    "_comment": "app_token/table_id 填到 config.local.json(表 URL 取)。profile 留空即用你 lark-cli 当前活动 profile(推荐——你的 agent 早已登录自己的飞书,不必再写);只有你有多个飞书身份、要指定用哪个时才填。",
     "app_token": "SET_IN_config.local.json",
     "table_id": "SET_IN_config.local.json",
-    "profile": "personal-li-shoushou"
+    "profile": ""
   },
   "collections": {
     "ip": [

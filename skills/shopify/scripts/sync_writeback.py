@@ -21,7 +21,7 @@ def main():
           if _lib.cell_text(r["fields"].get(ent["status"]))==a.status and _lib.cell_text(r["fields"].get(keyf)).strip()]
     if a.limit: rows=rows[:a.limit]
     print(f"[{a.entity}] 待写回(状态={a.status}) {len(rows)} 行")
-    app=cfg["feishu"]["app_token"];prof=cfg["feishu"]["profile"]; done=0
+    app=cfg["feishu"]["app_token"];prof=_lib.feishu_profile(cfg); done=0
     for r in rows:
         F=r["fields"]; oid=_lib.cell_text(F.get(keyf)).strip()
         cur=_lib.shopify(wb["cur_query"], store, {"id":oid})[wb["cur_key"]]

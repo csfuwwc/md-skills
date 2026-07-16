@@ -44,7 +44,7 @@ def main():
         k=_lib.cell_text(r["fields"].get(keyf)).strip()
         if k: idmap[k]=r
     # 字段类型
-    app=cfg["feishu"]["app_token"];prof=cfg["feishu"]["profile"]
+    app=cfg["feishu"]["app_token"];prof=_lib.feishu_profile(cfg)
     fd=_lib._lark(["api","GET",f"/bitable/v1/apps/{app}/tables/{tid}/fields","--params",'{"page_size":200}'],prof)
     ftype={f["field_name"]:f["type"] for f in (fd.get("data") or {}).get("items",[])}
     creates=[]; updates=[]
