@@ -21,8 +21,9 @@ SRCSET_WIDTHS = [480, 800, 1200, 1600]
 SIZES = "(max-width: 750px) 100vw, 750px"
 
 def strip_width(url):
-    u = re.sub(r'([?&])width=\d+', r'\1', url)
-    return u.replace("?&", "?").rstrip("?&")
+    # 兼容 Shopify 存储时把 & 转义成 &amp;
+    u = re.sub(r'(\?|&amp;|&)width=\d+', lambda m: '?' if m.group(1) == '?' else '', url)
+    return u.replace("?&", "?").rstrip("?&").rstrip("&")
 
 def capped(url, cap):
     u = strip_width(url); sep = "&" if "?" in u else "?"
@@ -45,7 +46,7 @@ def rewrite_html(html, cap, do_srcset, do_lazy):
         if not src_m: return tag
         src = src_m.group(1)
         if CDN not in src: return tag
-        if re.search(r'[?&]width=\d+', src): return tag  # 已封顶,跳过
+        if re.search(r'width=\d+', src): return tag  # 已封顶,跳过(兼容 &amp;width=)
         n[0] += 1
         new = tag
         new = re.sub(r'(\ssrc=")[^"]+(")', lambda x: x.group(1)+capped(src, cap)+x.group(2), new)
