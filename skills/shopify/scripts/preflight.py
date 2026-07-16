@@ -20,6 +20,15 @@ def main():
         print("   → cp config.example.json config.local.json,填入你的飞书表 app_token/table_id(从表 URL 取)")
     else:
         print(f"✅ config:feishu 表 {tid} · store {cfg.get('shopify_store')}")
+    # 1b 各实体表 id(product/collection/article/page 都要配,漏一个该实体流程就跑不了)
+    ents = cfg.get("entities") or {}
+    miss_ent = [e for e, v in ents.items()
+                if not (v or {}).get("table_id") or "SET_IN" in str((v or {}).get("table_id", ""))]
+    if not ents or miss_ent:
+        ok = False
+        print(f"❌ 实体表未配全 → {'、'.join(miss_ent) or '(entities 缺失)'}(entities.<实体>.table_id,共需 product/collection/article/page 四张)")
+    else:
+        print(f"✅ 实体表:{len(ents)} 张全配({'、'.join(ents.keys())})")
     # 2 飞书授权(读表)
     if at and "SET_IN" not in at:
         try:
