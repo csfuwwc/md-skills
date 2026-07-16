@@ -1,5 +1,5 @@
 {
-  "_comment": "Shopify 独立站运营 skill 的业务配置。复制为 config.local.json 并填入 Feishu 表 token。低敏感项可留公开;Feishu 表 token 只放 config.local.json。",
+  "_comment": "Shopify 独立站运营 skill 的业务配置(Funcinating)。飞书表标识已预填(base 已设指定协作者+外部关闭+锁定,公开无风险)。同事装好后无需再填飞书——只要①飞书账号被加为这些表协作者 ②lark-cli 登录自己的飞书 ③Shopify CLI 鉴权。要覆盖任何值可另建 config.local.json(会合并覆盖本文件,gitignored);主题/前端路径各机不同,做主题UI多语言时在 config.local.json 里填 theme 块。",
   "shopify_store": "qs0nxk-ft.myshopify.com",
   "primary_domain": "www.funcinating.com",
   "live_theme_id": "160040780031",
@@ -23,9 +23,9 @@
     "CHUANGASIA"
   ],
   "feishu": {
-    "_comment": "app_token/table_id 填到 config.local.json(表 URL 取)。profile 留空即用你 lark-cli 当前活动 profile(推荐——你的 agent 早已登录自己的飞书,不必再写);只有你有多个飞书身份、要指定用哪个时才填。",
-    "app_token": "SET_IN_config.local.json",
-    "table_id": "SET_IN_config.local.json",
+    "_comment": "app_token/table_id 已预填(Funcinating 的共享表)。★这些只是「表标识」不是密钥;该 base 已设为『指定协作者+外部关闭+锁定』,非协作者拿到 token 也读不了,故可公开★。真机密=飞书登录凭证,走 lark-cli keychain 不进文件。profile 留空即用你 lark-cli 当前活动 profile(你 agent 早登录了自己的飞书);要指定别的身份才填。前提:你的飞书账号得被加为这些表的协作者。",
+    "app_token": "QlzcbrpXna4HGNsmxaeczrWjnsf",
+    "table_id": "tbl1fMZwUXEygEnj",
     "profile": ""
   },
   "collections": {
@@ -65,16 +65,16 @@
   ],
   "entities": {
     "product": {
-      "table_id": "SET_IN_config.local.json"
+      "table_id": "tbl1fMZwUXEygEnj"
     },
     "collection": {
-      "table_id": "SET_IN_config.local.json"
+      "table_id": "tblBHwN1l91YFIKF"
     },
     "article": {
-      "table_id": "SET_IN_config.local.json"
+      "table_id": "tblRNFJXi8qCCi62"
     },
     "page": {
-      "table_id": "SET_IN_config.local.json"
+      "table_id": "tblIXLEVY6lyXX2l"
     }
   }
 }
