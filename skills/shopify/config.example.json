@@ -71,6 +71,9 @@
     },
     "article": {
       "table_id": "SET_IN_config.local.json"
+    },
+    "page": {
+      "table_id": "SET_IN_config.local.json"
     }
   }
 }
