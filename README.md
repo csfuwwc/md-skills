@@ -19,6 +19,9 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | [humanizer-zh](skills/humanizer-zh/) | 去除中文文本的 AI 味/翻译腔（humanizer 中文版） |
 | [funcinating-news](skills/funcinating-news/) | 基于新闻/话题生成 Funcinating 双语资讯（查证事实→五拍骨架→去AI味→发布到 Shopify news） |
 | [shopify](skills/shopify/) | Shopify 独立站商品上架流水线（同事提供素材，skill 全包 SEO/handle/metafield/FAQ/集合/多语言/写回上架；5 步·去审核·飞书表 SSOT） |
+| [aihot](skills/aihot/) | 查询 AI HOT 的中文 AI 资讯、精选、当前热点和日报。当用户问今天或最近的 AI 新闻、AI 圈动态、大模型或产品发布、OpenAI/Anthropic/Google 最近发布、AI 论文、AI 日报、AI HOT 精选、当前最热事件时使用。必须通过 aihot.virxact.com 的公开只读 API 获取当前数据，不凭训练记忆回答新闻。不需要 API Key 或 MCP server。 |
+| [skill-publisher](skills/skill-publisher/) | 将 ~/.agents/skills 中选定的 skill 直接发布到 GitHub 仓库，依次完成临时克隆、同步、提交、推送和自动清理。适用于“发布新 skill”、“同步更新 skill”、“按标记批量发布 skill”。支持 dry-run、按名称发布、按 .publish 标记发布、可选 prune。 |
+| [wechat-scraper](skills/wechat-scraper/) | 通过自建安全网关抓取公众号正文、扫码登录并查询最近文章列表 |
 
 ## 安装
 
@@ -51,7 +54,7 @@ npx skills add https://github.com/csfuwwc/md-skills --skill douyin-scraper
 自动安装到 `~/.cursor/skills/` 和 `~/.claude/skills/` 等目录，支持 [skills.sh](https://skills.sh/csfuwwc/md-skills/video-download) 生态。
 
 可替换 `--skill` 为以下任一值：
-`bilibili-keywords-scraper` `douyin-scraper` `weibo-scraper` `xiaohongshu-scraper` `imap-smtp-email` `feishu-cli-manager` `video-download` `seedance-prompt` `skill-vetter`
+`bilibili-keywords-scraper` `douyin-scraper` `weibo-scraper` `xiaohongshu-scraper` `imap-smtp-email` `feishu-cli-manager` `video-download` `seedance-prompt` `skill-vetter` `humanizer` `humanizer-zh` `funcinating-news` `shopify` `aihot` `skill-publisher` `wechat-scraper`
 
 ### curl 一键安装
 
