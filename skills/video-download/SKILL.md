@@ -83,15 +83,15 @@ python3 ./scripts/download.py "<分享文本或链接>" [输出文件名.mp4]
 
 视频号分享页通常只公开封面和基础元数据，不直接暴露可下载的视频地址。本 Skill 借鉴 `ltaoo/wx_channels_download` 的分享链接解析接口形状，但不会安装根证书、修改系统代理，也不会直接保存或发送元宝 Cookie。
 
-先配置一个兼容 `/api/channels/parse_sph?url=...` 的自托管解析器：
+优先配置 `Video-Picture-OSS-Auth` 自托管解析器；脚本也兼容 `wx_channels_download` 的嵌套响应结构：
 
 ```bash
-export WECHAT_CHANNELS_RESOLVER_URL="http://your-service:8080/api/channels/parse_sph"
-export WECHAT_CHANNELS_RESOLVER_API_KEY="<SERVICE_API_KEY>"
+export WECHAT_CHANNELS_RESOLVER_URL="http://api-ai.modianinc.com:8080/wechat/channels/resolve"
+export WECHAT_CHANNELS_RESOLVER_API_KEY="<WECHAT_API_KEY>"
 ```
 
 - `WECHAT_CHANNELS_RESOLVER_API_KEY` 可选；配置后通过 `X-API-Key` 请求头发送。
-- 元宝登录 Cookie 只应保存在解析器服务端的 Secret/环境变量中，不能放进 Skill、命令参数、Git 或元数据文件。
+- 元宝登录 Cookie 只应保存在解析器服务端的 `WECHAT_CHANNELS_YUANBAO_COOKIE` 环境变量或 GitHub Secret 中，不能放进 Skill、命令参数、Git 或元数据文件。
 - 公网 HTTP 会明文传输 API Key 和解析结果；当前无 HTTPS 时仅建议在可信网络临时使用，并尽快迁移到 HTTPS 或内网。
 - 解析器应返回可直接下载的 URL；若返回解密密钥，Skill 会拒绝下载并要求解析器提供已解密代理地址。
 
