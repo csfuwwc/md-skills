@@ -1,9 +1,9 @@
 ---
 name: video-download
-description: Canonical social-video download skill for all supported platforms and table workflows. Always use this skill as the single download entrypoint when handling Douyin/抖音, Xiaohongshu/小红书, Bilibili/B站, TikTok, YouTube, Twitter/X, Instagram links, or when batch-processing Lark Base/Sheet rows that include social post URLs and need video files.
+description: Canonical social-video download skill for all supported platforms and table workflows. Always use this skill as the single download entrypoint when handling WeChat Channels/微信视频号, Douyin/抖音, Xiaohongshu/小红书, Bilibili/B站, TikTok, YouTube, Twitter/X, Instagram links, or when batch-processing Lark Base/Sheet rows that include social post URLs and need video files.
 ---
 
-# 视频下载（抖音 / 小红书 / B站 + YouTube / Twitter 等）
+# 视频下载（视频号 / 抖音 / 小红书 / B站 + YouTube / Twitter 等）
 
 ## 统一入口原则（重要）
 
@@ -11,7 +11,7 @@ description: Canonical social-video download skill for all supported platforms a
 - 当任务来自飞书多维表格（Base）/表格批处理时，下载动作也必须调用本 skill 的 `scripts/download.py`，不要在业务脚本里另写直连下载器。
 - 需要正文/点赞/收藏时，可以在业务脚本里各自抓取；但“视频文件获取”必须复用本 skill 的下载链路与校验能力。
 
-从分享链接下载视频到本地。抖音/小红书/B站使用 Playwright 无头浏览器，TikTok 优先使用真实浏览器 CDP 抓流，其他站点使用 yt-dlp。
+从分享链接下载视频到本地。视频号使用用户配置的自托管解析器取得临时直链，抖音/小红书/B站使用 Playwright 无头浏览器，TikTok 优先使用真实浏览器 CDP 抓流，其他站点使用 yt-dlp。
 
 ## 下载流程
 
@@ -65,6 +65,7 @@ python3 ./scripts/download.py "<分享文本或链接>" [输出文件名.mp4]
 
 | 平台 | 支持的链接格式 | 引擎 | 需要登录 | 备注 |
 |------|---------------|------|---------|------|
+| 微信视频号 | `weixin.qq.com/sph/xxx`、`channels.weixin.qq.com/finder-preview/pages/sph?id=xxx` | 自托管解析器 + 直链下载 | 解析器端需要 | 优先 H.264，下载后用 ffprobe 校验 |
 | 抖音 | `v.douyin.com/xxx` 短链、`www.douyin.com/video/xxx`、`modal_id=xxx` | Playwright | 否 | 抓网络请求 |
 | 小红书 | `xiaohongshu.com/discovery/item/xxx`、`explore/xxx`、`xhslink.com/xxx` | Playwright | 否 | 抓网络请求 |
 | B站 | `bilibili.com/video/BVxxx`、`b23.tv/xxx` 短链 | Playwright | 推荐 | 解析 `__playinfo__`，需要 ffmpeg |
@@ -77,6 +78,39 @@ python3 ./scripts/download.py "<分享文本或链接>" [输出文件名.mp4]
 - 输出文件名可选，默认从视频标题生成
 - 文件保存到 `~/Downloads/`
 - 依赖：`playwright`（抖音/小红书/B站）、`yt-dlp`（其他站点）、`ffmpeg`
+
+## 微信视频号专项说明
+
+视频号分享页通常只公开封面和基础元数据，不直接暴露可下载的视频地址。本 Skill 借鉴 `ltaoo/wx_channels_download` 的分享链接解析接口形状，但不会安装根证书、修改系统代理，也不会直接保存或发送元宝 Cookie。
+
+先配置一个兼容 `/api/channels/parse_sph?url=...` 的自托管解析器：
+
+```bash
+export WECHAT_CHANNELS_RESOLVER_URL="http://your-service:8080/api/channels/parse_sph"
+export WECHAT_CHANNELS_RESOLVER_API_KEY="<SERVICE_API_KEY>"
+```
+
+- `WECHAT_CHANNELS_RESOLVER_API_KEY` 可选；配置后通过 `X-API-Key` 请求头发送。
+- 元宝登录 Cookie 只应保存在解析器服务端的 Secret/环境变量中，不能放进 Skill、命令参数、Git 或元数据文件。
+- 公网 HTTP 会明文传输 API Key 和解析结果；当前无 HTTPS 时仅建议在可信网络临时使用，并尽快迁移到 HTTPS 或内网。
+- 解析器应返回可直接下载的 URL；若返回解密密钥，Skill 会拒绝下载并要求解析器提供已解密代理地址。
+
+仅解析并查看元数据、临时直链：
+
+```bash
+python3 ./scripts/download.py resolve "https://weixin.qq.com/sph/ARebDCbPGy"
+```
+
+解析并下载：
+
+```bash
+python3 ./scripts/download.py "https://weixin.qq.com/sph/ARebDCbPGy" "video.mp4"
+```
+
+成功后生成：
+
+- 视频文件（默认 `~/Downloads/`，可用 `VIDEO_DOWNLOAD_OUTPUT_DIR` 修改）
+- `<视频文件>.meta.json`，包含作者、描述、封面、时间和互动数据，不包含临时视频 URL、API Key 或 Cookie
 
 ## TikTok 专项说明（CDP 优先）
 
@@ -165,3 +199,6 @@ brew install yt-dlp   # YouTube/Twitter/Instagram 等站点需要
 | CDN 地址过期 | 重新运行，URL 有几小时时效 |
 | cookie 过期 | 重新执行 login 命令 |
 | yt-dlp 未安装 | `brew install yt-dlp` 或 `pip3 install yt-dlp` |
+| 视频号提示未配置解析器 | 设置 `WECHAT_CHANNELS_RESOLVER_URL` |
+| 视频号解析失败/登录过期 | 在解析器服务端更新元宝登录 Cookie，不要把 Cookie 传给 Skill |
+| 视频号返回加密流 | 让解析器返回已解密代理 URL；Skill 不复制受限项目的解密代码 |

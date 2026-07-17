@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-视频下载脚本 — 抖音/小红书/B站 (Playwright) + 通用站点 (yt-dlp)
+视频下载脚本 — 视频号/抖音/小红书/B站 (Playwright) + 通用站点 (yt-dlp)
 用法:
   python3 download.py <分享链接或文本> [输出文件名]
+  python3 download.py resolve <视频号分享链接>  # 仅解析视频号元数据和临时直链
   python3 download.py login <平台>    # 登录并保存 cookie（bilibili/douyin/xiaohongshu）
 
 支持平台:
+  - 微信视频号: weixin.qq.com/sph/xxx                        [自托管解析器]
   - 抖音: v.douyin.com 短链 / www.douyin.com/video/xxx        [Playwright]
   - 小红书: xiaohongshu.com/discovery/item/xxx / xhslink.com  [Playwright]
   - B站: bilibili.com/video/BVxxx / b23.tv 短链               [Playwright]
@@ -186,6 +188,17 @@ def do_login(platform, signal_file=None):
 
 def detect_platform(text):
     """返回 ('platform', url) 或 (None, None)"""
+    # 微信视频号分享链接
+    m = re.search(r'https?://weixin\.qq\.com/sph/[A-Za-z0-9_-]+', text)
+    if m:
+        return 'wechat_channels', m.group(0)
+    # 微信视频号分享预览页
+    m = re.search(
+        r'https?://channels\.weixin\.qq\.com/finder-preview/pages/sph\?[^\s"\']*\bid=[A-Za-z0-9_-]+[^\s"\']*',
+        text,
+    )
+    if m:
+        return 'wechat_channels', m.group(0)
     # 抖音短链
     m = re.search(r'https?://v\.douyin\.com/[A-Za-z0-9_\-/]+', text)
     if m:
@@ -301,6 +314,181 @@ def download_file(cdn_url, output_path, referer, extra_headers=None):
                     break
                 f.write(chunk)
     return os.path.getsize(output_path)
+
+def validate_video_file(file_path):
+    """用 ffprobe 确认文件至少包含一条视频轨。"""
+    try:
+        result = subprocess.run(
+            ['ffprobe', '-v', 'error', '-show_entries', 'stream=codec_type',
+             '-of', 'default=nw=1:nk=1', file_path],
+            text=True, capture_output=True
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError('未安装 ffprobe，无法校验视频号下载结果') from exc
+    streams = [line.strip() for line in (result.stdout or '').splitlines()]
+    if result.returncode != 0 or 'video' not in streams:
+        raise RuntimeError('ffprobe 校验失败：下载结果不包含有效视频轨')
+    return True
+
+# ── 微信视频号下载 ────────────────────────────────────────
+
+def _find_nonempty_key(node, names):
+    """在解析响应中递归查找非空字段，不记录也不输出字段值。"""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key.lower() in names and value not in (None, '', 0, False):
+                return True
+            if _find_nonempty_key(value, names):
+                return True
+    elif isinstance(node, list):
+        return any(_find_nonempty_key(item, names) for item in node)
+    return False
+
+def parse_wechat_channels_resolver_response(payload):
+    """解析 wx_channels_download 兼容响应，返回统一的视频号元数据。"""
+    if not isinstance(payload, dict):
+        raise RuntimeError('视频号解析器返回了无效 JSON')
+
+    code = payload.get('code', 0)
+    if code not in (0, '0', None):
+        message = payload.get('msg') or payload.get('message') or '未知错误'
+        raise RuntimeError(f'视频号解析失败: {message}')
+
+    if _find_nonempty_key(
+        payload,
+        {'decryptkey', 'decrypt_key', 'encryptkey', 'encrypt_key', 'enckey', 'enc_key'},
+    ):
+        raise RuntimeError('解析器返回的是加密视频流；请配置返回已解密代理地址的解析器')
+
+    outer_data = payload.get('data') or {}
+    inner_data = outer_data.get('data') if isinstance(outer_data, dict) else None
+    inner_data = inner_data if isinstance(inner_data, dict) else outer_data
+    feed_info = inner_data.get('feedInfo') if isinstance(inner_data, dict) else None
+    feed_info = feed_info if isinstance(feed_info, dict) else inner_data
+    author_info = inner_data.get('authorInfo') if isinstance(inner_data, dict) else {}
+    author_info = author_info if isinstance(author_info, dict) else {}
+
+    h264 = feed_info.get('h264VideoInfo') or {}
+    h264 = h264 if isinstance(h264, dict) else {}
+    video_url = (
+        h264.get('videoUrl')
+        or feed_info.get('videoUrl')
+        or feed_info.get('originVideoUrl')
+    )
+    if not isinstance(video_url, str) or not video_url.startswith(('http://', 'https://')):
+        raise RuntimeError('视频号解析器未返回可下载的视频地址')
+
+    return {
+        'video_url': video_url,
+        'author': author_info.get('nickname') or feed_info.get('nickname') or '',
+        'description': feed_info.get('description') or '',
+        'cover_url': feed_info.get('coverUrl') or '',
+        'created_at': feed_info.get('createtime'),
+        'metrics': {
+            'favorite': feed_info.get('favCountFmt'),
+            'like': feed_info.get('likeCountFmt'),
+            'forward': feed_info.get('forwardCountFmt'),
+            'comment': feed_info.get('commentCountFmt'),
+        },
+    }
+
+def resolve_wechat_channels(url, resolver_url=None, api_key=None):
+    """通过用户配置的服务端解析器取得视频号临时直链。"""
+    resolver_url = (
+        resolver_url or os.environ.get('WECHAT_CHANNELS_RESOLVER_URL', '').strip()
+    )
+    if not resolver_url:
+        raise RuntimeError(
+            '未配置 WECHAT_CHANNELS_RESOLVER_URL；请指向兼容 '
+            'wx_channels_download /api/channels/parse_sph 的自托管解析器'
+        )
+    if not resolver_url.startswith(('http://', 'https://')):
+        raise RuntimeError('WECHAT_CHANNELS_RESOLVER_URL 必须是 http(s) URL')
+
+    parsed = urllib.parse.urlparse(resolver_url)
+    query = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+    query.append(('url', url))
+    request_url = urllib.parse.urlunparse(
+        parsed._replace(query=urllib.parse.urlencode(query))
+    )
+    request = urllib.request.Request(request_url, headers={
+        'User-Agent': UA,
+        'Accept': 'application/json',
+    })
+    api_key = api_key if api_key is not None else os.environ.get(
+        'WECHAT_CHANNELS_RESOLVER_API_KEY', ''
+    ).strip()
+    if api_key:
+        request.add_header('X-API-Key', api_key)
+
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            payload = json.loads(response.read().decode('utf-8'))
+    except Exception as exc:
+        raise RuntimeError(f'请求视频号解析器失败: {exc}') from exc
+    return parse_wechat_channels_resolver_response(payload)
+
+def _wechat_channels_id(url):
+    match = re.search(r'/sph/([A-Za-z0-9_-]+)', url)
+    if match:
+        return match.group(1)
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+    return (query.get('id') or ['unknown'])[0]
+
+def download_wechat_channels(url, output_name=None):
+    """解析并下载微信视频号，下载后写出不含临时直链的元数据。"""
+    print(f'[1/4] 解析微信视频号链接: {url}')
+    metadata = resolve_wechat_channels(url)
+    print('[2/4] 已取得临时视频地址，开始下载...')
+
+    if not output_name:
+        label = '_'.join(filter(None, [
+            metadata.get('author', ''),
+            metadata.get('description', '')[:40],
+        ]))
+        output_name = clean_filename(
+            label, f'wechat_channels_{_wechat_channels_id(url)}'
+        ) + '.mp4'
+    elif not output_name.lower().endswith('.mp4'):
+        output_name += '.mp4'
+
+    out_dir = os.path.expanduser(
+        os.environ.get('VIDEO_DOWNLOAD_OUTPUT_DIR', '~/Downloads')
+    )
+    os.makedirs(out_dir, exist_ok=True)
+    output_path = os.path.join(out_dir, output_name)
+
+    try:
+        size = download_file(
+            metadata['video_url'],
+            output_path,
+            'https://channels.weixin.qq.com/',
+            {'Origin': 'https://channels.weixin.qq.com'},
+        )
+        print('[3/4] 下载完成，正在校验视频轨...')
+        validate_video_file(output_path)
+    except Exception:
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        raise
+
+    public_metadata = {
+        'platform': 'wechat_channels',
+        'source_url': url,
+        'author': metadata.get('author'),
+        'description': metadata.get('description'),
+        'cover_url': metadata.get('cover_url'),
+        'created_at': metadata.get('created_at'),
+        'metrics': metadata.get('metrics') or {},
+        'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'output_path': output_path,
+    }
+    with open(output_path + '.meta.json', 'w', encoding='utf-8') as handle:
+        json.dump(public_metadata, handle, ensure_ascii=False, indent=2)
+
+    print(f'[4/4] 视频号下载完成: {output_path} ({size / 1048576:.1f}MB)')
+    print(f'       元数据: {output_path}.meta.json')
+    return output_path
 
 def launch_browser_and_capture(page_url, video_filter_fn, wait_s=10, extra_wait_s=5, platform=None):
     """
@@ -1012,10 +1200,12 @@ def main():
     if len(sys.argv) < 2:
         print("用法:")
         print("  python3 download.py <分享链接或文本> [输出文件名]  # 下载视频")
+        print("  python3 download.py resolve <视频号分享链接>       # 仅解析视频号")
         print("  python3 download.py login <平台> [--signal-file F] # 登录保存cookie")
         print("  python3 download.py check-login <平台>             # 检查登录状态")
         print()
-        print("支持平台: 抖音 / 小红书 / B站 (Playwright)")
+        print("支持平台: 微信视频号 (自托管解析器)")
+        print("         抖音 / 小红书 / B站 (Playwright)")
         print("         TikTok (CDP 优先，失败回退 yt-dlp)")
         print("         YouTube / Twitter / Instagram 等 (yt-dlp)")
         print("登录平台: bilibili / douyin / xiaohongshu")
@@ -1049,12 +1239,27 @@ def main():
         do_login(platform, signal_file=signal_file)
         return
 
+    # resolve 子命令：只解析视频号，不下载；不会输出解析器 API Key。
+    if sys.argv[1] == 'resolve':
+        if len(sys.argv) < 3:
+            print("用法: python3 download.py resolve <视频号分享链接>")
+            sys.exit(1)
+        platform, url = detect_platform(sys.argv[2])
+        if platform != 'wechat_channels':
+            print("错误: resolve 当前只支持微信视频号分享链接")
+            sys.exit(1)
+        result = resolve_wechat_channels(url)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return
+
     share_text = sys.argv[1]
     output_name = sys.argv[2] if len(sys.argv) > 2 else None
 
     platform, url = detect_platform(share_text)
 
-    if platform == 'douyin':
+    if platform == 'wechat_channels':
+        download_wechat_channels(url, output_name)
+    elif platform == 'douyin':
         download_douyin(url, output_name)
     elif platform == 'xiaohongshu':
         download_xiaohongshu(url, output_name)
@@ -1066,4 +1271,8 @@ def main():
         download_ytdlp(share_text, output_name)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except RuntimeError as exc:
+        print(f'错误: {exc}')
+        sys.exit(1)
