@@ -2,50 +2,56 @@
 
 Base URL: `http://api-ai.modianinc.com:8080/wechat`
 
-Authenticate every route below with `X-API-Key: <WECHAT_API_KEY>`.
+The VPS network layer restricts callers by IP. Do not attach application API keys, WeChat cookies, `auth-key`, or QR-session data.
 
-## Public article
+## Fetch one public article
 
 `GET /api/public/v1/download`
 
 Query parameters:
 
-- `url`: full `https://mp.weixin.qq.com/s/...` article URL
-- `format`: `json`, `html`, `markdown`, or `text`
+- `url`: full `https://mp.weixin.qq.com/s/...` article URL.
+- `format`: `json`, `html`, `markdown`, or `text`.
 
-The JSON response includes fields such as `title`, `nick_name`, `author`, `desc`, `content_noencode`, `create_time`, and `link`.
+This operation does not require a WeChat login. A valid article can occasionally return an empty JSON response; retry with Markdown, then HTML if metadata is needed.
 
-## Login
+## Fetch recent articles from the same official account
 
-- `POST /api/web/login/session/:sid`: create a login session; response contains `uuid`.
-- `GET /api/web/login/getqrcode`: return a QR image; send `Cookie: uuid=<uuid>`.
-- `GET /api/web/login/scan`: poll login state with the same UUID cookie.
-- `POST /api/web/login/bizlogin`: finalize confirmed login. Capture `auth-key` from `Set-Cookie`.
+`GET /api/v1/account/recent`
 
-Observed scan statuses:
+Query parameters:
 
-- `0`: waiting for scan
-- `1`: confirmed; call `bizlogin`
-- `2` or `3`: QR expired; create a new session
-- `4` or `6`: scanned and waiting for user confirmation
-- `5`: account has no bound email and cannot log in this way
+- `url`: any full article URL from the target official account.
+- `limit`: integer from 1 to 20; defaults to 5.
 
-## Account and history
+Successful response:
 
-`GET /api/web/mp/searchbiz`
+```json
+{
+  "ok": true,
+  "account": "公众号名称",
+  "articles": [
+    {
+      "title": "文章标题",
+      "url": "https://mp.weixin.qq.com/s/example",
+      "summary": "摘要",
+      "author": "作者",
+      "create_time": 1785112345,
+      "published_at": "2026-07-27T11:12:25+08:00"
+    }
+  ]
+}
+```
 
-- Query: `keyword`, `size`
-- Cookie: `auth-key=<value>`
-- Select an exact `nickname` match and retain its `fakeid`.
+The gateway identifies the account, requires an exact nickname match, injects the VPS-owned shared login, filters deleted records, sorts newest first, and enforces the requested limit.
 
-`GET /api/web/mp/appmsgpublish`
+Relevant failures:
 
-- Query: `id=<fakeid>`, `begin`, `size`, `keyword`
-- Cookie: `auth-key=<value>`
-- `publish_page` is a JSON-encoded string.
-- Each `publish_list[].publish_info` is another JSON-encoded string.
-- Article records are in `publish_info.appmsgex`; relevant fields include `title`, `link`, `digest`, `author_name`, `create_time`, and `is_deleted`.
+- `400`: invalid article URL or limit.
+- `404`: exact official-account match not found.
+- `503`: shared login missing or expired; an administrator must renew it.
+- `502`: upstream WeChat service failed.
 
-## Gateway boundaries
+## Boundaries
 
-The gateway intentionally exposes only the whitelisted routes above. The WeChat container has no public host port. Do not bypass the gateway or expose port 3000.
+The coworker-facing Skill must not call raw login, QR, search, history, or logout routes. The private `wechat-article-exporter` container must not publish a host port.

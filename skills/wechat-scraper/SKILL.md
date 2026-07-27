@@ -1,55 +1,42 @@
 ---
 name: wechat-scraper
-description: Use the private Video-Picture-OSS-Auth WeChat gateway to fetch a public WeChat article, extract HTML/JSON/Markdown/text, identify its official account, list recent account articles, or complete QR-code login for history access. Trigger for 微信公众号文章抓取、公众号作者识别、最近文章链接、历史文章列表、公众号扫码登录和登录授权复用 requests.
+description: Use the private Video-Picture-OSS-Auth WeChat gateway to fetch one public WeChat official-account article as HTML, JSON, Markdown, or text, or list the latest articles from the same official account. Trigger for 微信公众号文章抓取、公众号内容提取、公众号作者识别、最近文章链接和历史文章列表 requests.
 ---
 
 # WeChat Official Account Scraper
 
-Use the self-hosted gateway. Do not call a third-party public deployment when this service is available.
+Use only the self-hosted gateway at `http://api-ai.modianinc.com:8080/wechat`. Do not call third-party deployments, localhost, SSH, the private upstream container, or WeChat endpoints directly.
 
-## Configure access
-
-- Use `http://api-ai.modianinc.com:8080/wechat` as the default base URL.
-- Send `WECHAT_API_KEY` as `X-API-Key`. Never print, log, or commit it.
-- If the key exists only on `vps-boss`, execute requests there against `http://127.0.0.1:8080/wechat`; read the key from `/modian/Video-Picture-OSS-Auth/.env` without displaying it.
-- Treat `auth-key`, `uuid`, QR images, cookies, and account data as secrets. Store reusable authorization with mode `0600` and delete temporary QR/session files after use.
+The VPS network layer restricts callers by IP. Do not request, read, store, or send an API key, `auth-key`, Cookie, UUID, QR session, or other login credential. The gateway owns the shared official-account login.
 
 Read [references/api.md](references/api.md) when constructing requests or interpreting responses.
 
-## Choose the workflow
+## Fetch one public article
 
-### Fetch one public article
+Call `GET /api/public/v1/download` with:
 
-Call `GET /api/public/v1/download` with the article `url` and requested `format` (`json`, `html`, `markdown`, or `text`). This does not require a WeChat login.
+- `url`: the full `https://mp.weixin.qq.com/s/...` article URL.
+- `format`: `markdown` by default, or `json`, `html`, or `text` when the user requests it.
 
-For a content request, return the requested representation or a faithful summary. Preserve the original title, `nick_name`, author, description, publication time, and source URL when available.
+For a content request, return the requested representation or a faithful summary. Preserve the original title, official-account name, author, description, publication time, and source URL when available.
 
-### List recent articles from the same account
+If `format=json` returns HTTP 204 or an empty body, retry with `format=markdown`. Use `format=html` only when structured page metadata is required.
 
-1. Fetch the supplied article as JSON and read `nick_name`.
-2. Ensure a reusable `auth-key` exists; otherwise complete the QR login workflow.
-3. Call `GET /api/web/mp/searchbiz?keyword=<nick_name>&size=20` with `Cookie: auth-key=<value>`.
-4. Select the result whose `nickname` exactly equals `nick_name`; do not choose a similar account.
-5. Call `GET /api/web/mp/appmsgpublish?id=<fakeid>&begin=0&size=<limit>&keyword=` with the same cookie.
-6. Parse `publish_page` as JSON. For every `publish_list` item, parse `publish_info`, then read its `appmsgex` articles.
-7. Exclude deleted items, sort by `create_time` descending, and return the requested number of titles, dates, and links.
+## List recent articles from the same account
 
-Do not depend on `searchbyurl`: its upstream account-name parser can fail on otherwise valid WeChat article URLs. Use the article JSON `nick_name` fallback above.
+Call `GET /api/v1/account/recent` with:
 
-### Complete QR login
+- `url`: any full article URL from the target official account.
+- `limit`: the requested count from 1 to 20; default to 5.
 
-1. POST a unique session ID to `/api/web/login/session/<sid>` and retain the returned `uuid`.
-2. Request `/api/web/login/getqrcode` with `Cookie: uuid=<uuid>`, save the image temporarily, and show it to the user.
-3. Poll `/api/web/login/scan` with the same cookie. Ask the user to confirm in WeChat when required.
-4. When `status` is `1`, POST `/api/web/login/bizlogin` with the same cookie.
-5. Capture `auth-key` from the response `Set-Cookie` and store it securely for later history requests.
+Use the returned `account` and `articles` fields directly. Return each article's title, publication time, and URL; include summary or author when useful. The gateway performs exact account matching, deleted-item filtering, descending time ordering, response normalization, and shared-login injection.
 
-The upstream cookie is marked `Secure`, while the current service uses HTTP. Explicitly send the cookie header during this workflow instead of relying on an automatic HTTP cookie jar. QR lifetime is short; the successful login authorization is normally valid for about four days and is persisted by the service.
+Do not call `searchbiz`, `searchbyurl`, `appmsgpublish`, login, QR, or logout endpoints from this coworker-facing Skill.
 
 ## Handle failures
 
-- On `401`, verify only that `WECHAT_API_KEY` is configured; never reveal its value.
-- On “未登录或登录已过期”, start QR login again.
-- On an expired QR status, create a new session and image rather than reusing the old UUID.
-- If exact account matching fails, report the parsed nickname and candidate names; do not guess.
-- Do not change OSS or TikHub routes, deployment state, or WeChat account content while performing read-only scraping.
+- On an IP access error or unreachable gateway, report that the caller's network is not in the VPS allowlist.
+- On HTTP 503 mentioning the shared login, tell the user: `公众号共享登录态已过期，请联系管理员扫码续期。` Do not start a QR workflow.
+- On HTTP 404 from the recent endpoint, report the parsed official-account name when present and do not guess a similar account.
+- On an empty JSON article response, use the Markdown/HTML fallback above.
+- Do not change OSS, TikHub, deployment state, administrator login state, or WeChat content while performing read-only scraping.
