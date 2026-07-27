@@ -31,12 +31,12 @@ Call `GET /api/v1/account/recent` with:
 
 Use the returned `account` and `articles` fields directly. Return each article's title, publication time, and URL; include summary or author when useful. The gateway performs exact account matching, deleted-item filtering, descending time ordering, response normalization, and shared-login injection.
 
-Do not call `searchbiz`, `searchbyurl`, `appmsgpublish`, login, QR, or logout endpoints from this coworker-facing Skill.
+Do not call `searchbiz`, `searchbyurl`, `appmsgpublish`, administrator-page, login, QR, or logout endpoints from this coworker-facing Skill.
 
 ## Handle failures
 
 - On an IP access error or unreachable gateway, report that the caller's network is not in the VPS allowlist.
-- On HTTP 503 mentioning the shared login, tell the user: `公众号共享登录态已过期，请联系管理员扫码续期。` Do not start a QR workflow.
+- On HTTP 503 mentioning the shared login, tell the user: `公众号共享登录态已过期，服务已通过飞书通知管理员扫码续期。` The gateway sends a deduplicated Feishu card with the administrator button. Do not open the administrator page, start a QR workflow, or ask the user for credentials.
 - On HTTP 404 from the recent endpoint, report the parsed official-account name when present and do not guess a similar account.
 - On an empty JSON article response, use the Markdown/HTML fallback above.
 - Do not change OSS, TikHub, deployment state, administrator login state, or WeChat content while performing read-only scraping.

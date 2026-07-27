@@ -49,9 +49,9 @@ Relevant failures:
 
 - `400`: invalid article URL or limit.
 - `404`: exact official-account match not found.
-- `503`: shared login missing or expired; an administrator must renew it.
+- `503`: shared login missing or expired. The gateway sends the administrator a Feishu renewal card, deduplicated for 30 minutes; ordinary callers should wait for renewal and retry later.
 - `502`: upstream WeChat service failed.
 
 ## Boundaries
 
-The coworker-facing Skill must not call raw login, QR, search, history, or logout routes. The private `wechat-article-exporter` container must not publish a host port.
+The coworker-facing Skill must not call the administrator page or raw login, QR, search, history, or logout routes. The private `wechat-article-exporter` container must not publish a host port.
