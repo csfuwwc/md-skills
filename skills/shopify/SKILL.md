@@ -1,15 +1,13 @@
 ---
 name: shopify
-version: 1.0.0
 description: |
   Shopify 独立站(Funcinating/范趣町)新增商品的标准上架流水线。同事只管「提供素材」,
   skill 把 SEO/handle/metafield/FAQ/集合/结构化数据/多语言/写回上架 全包,只在缺输入、
   需拍板、要确认上线时找人。5 步:sync-pull → audit → optimize → translate → confirm-publish。
+  上架前逐商品要求用户明确选择 CONTINUE 或 DENY,库存策略无默认值、未确认即阻断。
   无「审核」环节——「确认上线」是唯一人工闸。飞书表=工作台+SSOT,Shopify↔飞书同步。
   与 humanizer / humanizer-zh 组合。★用前必跑 `scripts/preflight.py` 自检(config/授权/依赖应用),缺就按提示补★。业务标识读 config;token 走 keychain/.env.local 不写死。
 license: MIT
-compatibility: any-agent
-requires_skills: humanizer, humanizer-zh
 ---
 
 # shopify:独立站商品上架流水线
@@ -17,7 +15,7 @@ requires_skills: humanizer, humanizer-zh
 > ⚠️ **第一步永远是自检**:`cd scripts && python3 preflight.py`。它会查 config.local.json 建了没、飞书/Shopify 授权就绪没、依赖的 Shopify 应用装了没——**没绿之前别跑后面的脚本**(脚本本身也有守卫,缺 config 会直接拦住并指回这里)。换设备/换人第一件事就是它。
 
 
-**核心模型**:**同事 = 提供者 + 最终确认**;**skill = 专家,把专业活全干**。skill 只在 3 种时候找人:①缺必要输入→提醒补 ②遇决策→让拍板 ③全弄好→**确认上线(唯一的闸,没有独立"审核")**。
+**核心模型**:**同事 = 提供者 + 最终确认**;**skill = 专家,把专业活全干**。skill 只在 3 种时候找人:①缺必要输入→提醒补 ②遇决策→让拍板(含逐商品库存策略) ③全弄好→**确认上线(唯一的闸,没有独立"审核")**。
 
 ## 何时用
 - 同事在 Shopify 建了草稿商品,要走完整上架(内容/SEO/GEO/多语言/集合/结构化/索引)。
@@ -97,9 +95,15 @@ requires_skills: humanizer, humanizer-zh
 - **责任**:skill 翻;术语问同事。
 
 ## 步骤 5 · `confirm-publish`(自检→同事确认→写回+上架+索引)· ✅ 写回已脚本化
-- **跑法**:`python3 scripts/sync_writeback.py [--dry-run]`(写回「待确认上线」行:productUpdate 标题/描述/SEO + metafieldsSet custom.* + 字段级 diff + handle 不写回 + **DRAFT→ACTIVE 上架** + **集合归属 collectionAddProducts** → 回填状态=已上线·写回状态·时间)。★运行本脚本=同事「确认上线」闸★。已 E2E 验证(造真草稿跑通 pull→audit→writeback→ACTIVE+集合+闭环,测后清理)。多语言写回=product-translate 步骤;GSC 索引提交仍手动/待补。
+- **跑法**:`python3 scripts/sync_writeback.py [--dry-run] --inventory-policy 'PRODUCT_ID=CONTINUE|DENY'`。批量上架时每个商品重复传一次 `--inventory-policy`。第一次未传可以让脚本列出待确认商品并阻断；**不存在默认策略，也不得代替用户推断**。
+- **库存策略人工闸(商品必做)**:
+  1. 逐商品向用户展示当前各变体 `inventoryPolicy`，明确解释 `CONTINUE=库存为0仍可下单`、`DENY=库存为0停止销售`。
+  2. 让用户逐商品二选一；不得预选、不得根据商品类型/库存/标签自动决定、不得用“推荐值”当确认。
+  3. 用户未明确回答的商品不写回、不转 `ACTIVE`；脚本缺少对应 `PRODUCT_ID=...` 时整批阻断。
+  4. 获得确认后，脚本用 `productVariantsBulkUpdate` 只修改与选择不一致的变体，再继续商品写回。多于 250 个变体时停止并转人工处理。
+- **完整写回**:写回「待确认上线」行:变体库存策略 + productUpdate 标题/描述/SEO + metafieldsSet custom.* + 字段级 diff + handle 不写回 + **DRAFT→ACTIVE 上架** + **集合归属 collectionAddProducts** → 回填状态=已上线·写回状态·时间。★运行本脚本=同事「确认上线」闸★。多语言写回=product-translate 步骤;GSC 索引提交仍手动/待补。
 - **触发**:状态=待确认上线。
-- **做**:① **自检**:必填齐 · faq 合法 json · SEO 长度 · DNT · 无 `$` · **正式列非空(★FAQ 坑:内容别只在草稿列★)** · handle 英文 ② 出「上线预检报告」③ **同事确认上线(唯一的闸)** ④ 写回 Shopify:`productUpdate`(标题/描述/seo/tags/type)+ `metafieldsSet`(custom.* + `_<lang>`)+ `translationsRegister`(各语言)+ 集合归属;**字段级 diff**(只写与线上不同的)⑤ 商品转 Active ⑥ GSC 提交索引 ⑦ 回填 `写回状态/时间`·`索引状态`·状态=`已上线`。
+- **做**:① **自检**:必填齐 · faq 合法 json · SEO 长度 · DNT · 无 `$` · **正式列非空(★FAQ 坑:内容别只在草稿列★)** · handle 英文 ② 出「上线预检报告」并列出当前库存策略 ③ **同事逐商品确认 CONTINUE/DENY + 确认上线** ④ 先写用户确认的变体库存策略，再写回 Shopify:`productUpdate`(标题/描述/seo/tags/type)+ `metafieldsSet`(custom.* + `_<lang>`)+ `translationsRegister`(各语言)+ 集合归属;**字段级 diff**(只写与线上不同的)⑤ 商品转 Active ⑥ GSC 提交索引 ⑦ 回填 `写回状态/时间`·`索引状态`·状态=`已上线`。
 - **铁律**:只写同事确认的 · **handle 不写回**(改动走手动 + 301)· **正式列空不写上线** · 失败逐行记 `写回错误` 不中断 · **加商品不用 theme publish**(动主题代码才要)。
 - **责任**:同事确认上线(拍板);skill 执行全部写回/上架/索引。
 
@@ -122,6 +126,7 @@ requires_skills: humanizer, humanizer-zh
 9. **新语言别只翻商品**:主题 UI 串(locale 文件)+ market 启用是两个独立必做项——跑 `locale_check.py` + `--market-check` 自检,否则店面半英半外 / 前台压根不显示。
 10. **多配送区别复制商品**:Shopify「1商品=1配送方案」,复制会变「款×2」数据乱(-TH 教训);用一方案+多仓库组。audit 会扫区域后缀警示。
 11. **Judge.me 评价挂件**:用**官方挂件**(简版会空),且 app embed 的 `settings_data` 必须存进主题设置,否则 release 会剥掉挂件;改主题 `--only` 外科式推。评价按用户原文展示,不做语言适配。
+12. **库存策略绝不默认**:每个待上架商品都必须由用户明确确认 `CONTINUE` 或 `DENY`;未确认即阻断,不得根据“普通商品/预售商品”等上下文替用户决定。
 
 ## 关联
 - 深挖多语言:飞书《多语言适配指南(复用手册)》

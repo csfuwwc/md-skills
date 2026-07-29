@@ -122,6 +122,7 @@ ENTITIES = {
 # ---------- 写回规格(sync_writeback 用)----------
 PRODUCT_WB = {
  "cur_query":"""query($id:ID!){ product(id:$id){ title descriptionHtml productType tags status seo{title description}
+   variants(first:250){ nodes{ id title sku inventoryPolicy } pageInfo{ hasNextPage } }
    metafields(first:60){ edges{ node{ namespace key value } } } collections(first:30){edges{node{handle}}} } }""",
  "cur_key":"product",
  "update_mutation":"mutation($p:ProductInput!){ productUpdate(input:$p){ userErrors{field message} } }",
