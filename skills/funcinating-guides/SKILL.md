@@ -35,12 +35,14 @@ news 短资讯不归这里,用 funcinating-news。
 
 1. **拉现状**:`{ blogs(first:5){ nodes{ handle articles(first:50){ nodes{ handle title } } } } }`
    ——新题的核心关键词与任何既有 handle/title 重叠 → 换题或换意图(换意图须在文首规划里写明与既有篇的差异一句话)。
-2. **查选题池台账**(SSOT):飞书多维表格「Funcinating 内容选题池」
-   base=`AMkRbWoXcazgd9sioxlc838Qn6d` / table=`tblEAcnczTVRrDgc`
-   (wiki: https://jcnp2psokv2t.feishu.cn/wiki/ZeTZwZOfXiWYH7kOTfacCNM7nyh)。
-   优先从「候选」里取;临时新题先入池再动笔。
-3. **发布后回填**:状态→已发布、写入发布 handle;7 天后回填 GA4 复盘列(浏览/停留)。
-   池子低于 6 个候选时,按下方选题方法补充一批(同样先过第 1 道闸)。
+2. **查关键词台账**(需求侧 SSOT):飞书多维表格「【正式】Funcinating 关键词台账」
+   base=`MsmGbvtMuaI9jos8y0qcItnmnif` / table=`tblu9AIxGSTVIgC8`
+   (wiki: https://jcnp2psokv2t.feishu.cn/wiki/E6SWwc7mlivZd8kFcNNc1Mslnyh)。
+   选题=从「写作排期=候选」或「状态=待校准/仅记录且无承接页」的词里挑;
+   新词先入台账(词族/分层用表内既有选项)再动笔。台账候选 <6 个时按下方选题方法补一批。
+3. **发布后回填**(同一张台账):写作排期→已发布、承接页=文章 URL、状态→已有承接;
+   7 天后回填「7日GA4复盘」列(浏览/人均停留)。文章内容与同步状态在「商品内容与SEO-GEO字段表」的
+   Articles 表,不在台账重复记。
 
 ## 选题方法(三类,按 GA4 已验证的优先级)
 
