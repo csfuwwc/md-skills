@@ -31,6 +31,17 @@ news 短资讯不归这里,用 funcinating-news。
    `/blogs/guides/{handle}`。外发推广链接才按 UTM 规范,正文内链**不加 UTM**。
 6. 成稿必须过 humanizer(英文)去 AI 味;中文版过 humanizer-zh。
 
+## 选题去重闸(动笔前必过,三道)
+
+1. **拉现状**:`{ blogs(first:5){ nodes{ handle articles(first:50){ nodes{ handle title } } } } }`
+   ——新题的核心关键词与任何既有 handle/title 重叠 → 换题或换意图(换意图须在文首规划里写明与既有篇的差异一句话)。
+2. **查选题池台账**(SSOT):飞书多维表格「Funcinating 内容选题池」
+   base=`AMkRbWoXcazgd9sioxlc838Qn6d` / table=`tblEAcnczTVRrDgc`
+   (wiki: https://jcnp2psokv2t.feishu.cn/wiki/ZeTZwZOfXiWYH7kOTfacCNM7nyh)。
+   优先从「候选」里取;临时新题先入池再动笔。
+3. **发布后回填**:状态→已发布、写入发布 handle;7 天后回填 GA4 复盘列(浏览/停留)。
+   池子低于 6 个候选时,按下方选题方法补充一批(同样先过第 1 道闸)。
+
 ## 选题方法(三类,按 GA4 已验证的优先级)
 
 1. **蹭热词对比型(流量最大)**:`{顶流IP} alternatives`、`{顶流} vs {自家IP}`、`best {品类} {年份}`。
