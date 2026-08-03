@@ -76,6 +76,8 @@ mutation($id:ID!,$article:ArticleUpdateInput!){
 # article 可含: title, body(HTML), summary(HTML), isPublished, publishDate, image:{altText,url}
 ```
 - ⚠️ 发布日期字段是 **`publishDate`（DateTime），不是 `publishedAt`**。放出隐藏文章=`isPublished:true`；补真实日期=`publishDate:"2025-11-06T08:00:00Z"`(按事件真实时间，别让它挂成今天)。
+- ⚠️ **news 正文原则上不插图**(只设题图);若某篇确需正文配图,严格按 funcinating-guides 的
+  「正文配图终版配方」执行(预裁16:9→主题asset→`<p>`包裹,2026-08-03 定稿),别自己发明写法。
 - ⚠️ **图片 alt 常残留旧标题**：`image:{altText:"<新描述>", url:"<现有CDN url>"}`(url 传当前值以保持图片不变)。
 - ⚠️ **EN 改动后 digest 会变**：注册 ZH 前必须**重取** `translatableContent.digest`。
 - 来源外链：`metafieldsSet(metafields:[{ownerId:"<ARTICLE_GID>",namespace:"custom",key:"source_url",type:"url",value:"<真实外链>"}])`。
