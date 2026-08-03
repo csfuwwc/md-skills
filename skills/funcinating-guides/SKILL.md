@@ -87,9 +87,11 @@ news 短资讯不归这里,用 funcinating-news。
 - 首屏(导语后第一节内)就给出"本文清单预览"一句话,让扫读者知道往下有什么;
 - 短句、具体名词、可执行动作;每节 ≤150 词;
 - 每个场景节配图(商品图 CDN 链接),纯文字大段是跳出主因。
-- **图片标记规范(2026-08-03 固化,裸 `<img>` 会宽度失控)**:统一
-  `<img src="{cdn_url}" alt="{描述}" width="800" height="800" loading="lazy" style="max-width:100%;height:auto;border-radius:8px">`
-  ——style 三件套必带(范本=how-to-attach-bag-charm 的图);商品图 src 可加 `&width=800` 参数控源图大小。
+- **图片标记规范(2026-08-03 固化,裸 `<img>` 会宽度失控)**:全文统一 16:9 横幅
+  `<img src="{cdn_url}?width=1200&height=675&crop=center" alt="{描述}" width="1200" height="675" loading="lazy" style="max-width:100%;height:auto;border-radius:8px">`
+  ——style 三件套必带(范本=how-to-attach-bag-charm 的图);方形商品图靠 CDN `crop=center` 裁成横幅。
+  ⚠️ CDN 不放大:原图短边 <1200 时请求 1200×675 只会返回小方图,须降到原图内的 16:9(如 800×450),
+  写完逐张 curl 回来验证实际尺寸(PIL 查 size),否则一张方图混在横幅里观感全毁。
 
 篇幅:3500-5000 字符 HTML(两篇范本分别 4958/3822),别灌水到万字。
 
