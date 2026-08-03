@@ -87,6 +87,9 @@ news 短资讯不归这里,用 funcinating-news。
 - 首屏(导语后第一节内)就给出"本文清单预览"一句话,让扫读者知道往下有什么;
 - 短句、具体名词、可执行动作;每节 ≤150 词;
 - 每个场景节配图(商品图 CDN 链接),纯文字大段是跳出主因。
+- **图片标记规范(2026-08-03 固化,裸 `<img>` 会宽度失控)**:统一
+  `<img src="{cdn_url}" alt="{描述}" width="800" height="800" loading="lazy" style="max-width:100%;height:auto;border-radius:8px">`
+  ——style 三件套必带(范本=how-to-attach-bag-charm 的图);商品图 src 可加 `&width=800` 参数控源图大小。
 
 篇幅:3500-5000 字符 HTML(两篇范本分别 4958/3822),别灌水到万字。
 
@@ -95,10 +98,16 @@ news 短资讯不归这里,用 funcinating-news。
 ```graphql
 # blog: guides 的 gid 现查 { blogs(first:5){ nodes{ id handle } } }
 mutation { articleCreate(article: { blogId: "...", title: "...", handle: "...",
-  body: "<HTML>", summary: "<meta描述,150字符内>", isPublished: true,
+  body: "<HTML>", summary: "<meta描述,150字符内>", isPublished: false,
+  author: { name: "Funcinating Team" },   # author 必填,缺了报 INVALID_VARIABLE
   tags: ["guides"], image: { url: "...", altText: "..." } }) {
   article { id } userErrors { field message } } }
 ```
+
+**发布流程(2026-08-03 owner 确立,永久人工闸)**:一律先 `isPublished: false` 隐藏创建
+→ 给 owner 后台预览链接(admin.shopify.com/store/qs0nxk-ft/content/articles/{id})
+→ owner 确认后才 articleUpdate 置 isPublished: true,然后才做四语言与台账回填。
+未确认前公开 URL 404、搜索引擎不可见。
 
 坑(与 funcinating-news 共享):
 - handle 全小写连字符英文,带年份的热词题建议 handle 也带年份(labubu-alternatives-2026);
