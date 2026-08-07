@@ -1,4 +1,4 @@
-#!/home/ubuntu/creator-assets/.venv/bin/python
+#!/usr/bin/env python3
 """素材库 OSS 上传 CLI:复用 Stagehand storage.oss_upload(STS 缓存刷新 + put_object)。
 
 用法:

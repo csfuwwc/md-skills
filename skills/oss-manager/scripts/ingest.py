@@ -1,4 +1,4 @@
-#!/home/ubuntu/creator-assets/.venv/bin/python
+#!/usr/bin/env python3
 """素材入库:本地文件 → OSS 归档 → 回写「达人·素材」表。
 
 路径规则(脚本拼,人不碰):
@@ -28,8 +28,8 @@ import tempfile
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-sys.path.insert(0, "/home/ubuntu/Stagehand/python")
-from stagehand.storage.oss_upload import make_default_uploader  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from oss_client import make_uploader  # noqa: E402
 
 APP_TOKEN = "BkRCb9uKjaN8VzsgGDZciqRxnDc"
 TABLE_ID = "tblxpajEH9CoNcQa"
@@ -179,7 +179,7 @@ def main() -> int:
         print("\n--dry-run,未上传未写表")
         return 0
 
-    upload = make_default_uploader(dir_prefix=OSS_PREFIX)
+    upload = make_uploader(OSS_PREFIX)
     urls, cover_url, original_names = [], None, []
     tmpdir = None
     try:

@@ -298,6 +298,12 @@ def write_tiktok_meta(output_path, source, target_video_id=None, resolved_video_
     print(f"[TikTok/META] {meta_path}")
     return meta_path
 
+def output_dir():
+    """下载目录：默认 ~/Downloads，可用 VIDEO_DOWNLOAD_OUTPUT_DIR 覆盖（批处理场景常用）。"""
+    d = os.path.expanduser(os.environ.get('VIDEO_DOWNLOAD_OUTPUT_DIR', '~/Downloads'))
+    os.makedirs(d, exist_ok=True)
+    return d
+
 def download_file(cdn_url, output_path, referer, extra_headers=None):
     """下载文件到本地，支持大文件流式写入"""
     req = urllib.request.Request(cdn_url)
@@ -452,10 +458,7 @@ def download_wechat_channels(url, output_name=None):
     elif not output_name.lower().endswith('.mp4'):
         output_name += '.mp4'
 
-    out_dir = os.path.expanduser(
-        os.environ.get('VIDEO_DOWNLOAD_OUTPUT_DIR', '~/Downloads')
-    )
-    os.makedirs(out_dir, exist_ok=True)
+    out_dir = output_dir()
     output_path = os.path.join(out_dir, output_name)
 
     try:
@@ -598,7 +601,7 @@ def download_douyin(url, output_name=None):
         title = page_title.replace(' - 抖音', '').strip()
         output_name = clean_filename(title, f"douyin_{video_id}") + '.mp4'
 
-    output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+    output_path = os.path.join(output_dir(), output_name)
     size = download_file(cdn_url, output_path, 'https://www.douyin.com/')
     print(f"[4/4] 下载完成: {output_path} ({size / 1048576:.1f}MB)")
 
@@ -638,7 +641,7 @@ def download_xiaohongshu(url, output_name=None):
         title = re.sub(r'小红书\s*[-–—]\s*你的生活兴趣社区', '', title).strip()
         output_name = clean_filename(title, f"xiaohongshu_{note_id}") + '.mp4'
 
-    output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+    output_path = os.path.join(output_dir(), output_name)
     size = download_file(cdn_url, output_path, 'https://www.xiaohongshu.com/')
     print(f"[4/4] 下载完成: {output_path} ({size / 1048576:.1f}MB)")
 
@@ -687,7 +690,7 @@ def download_bilibili(url, output_name=None):
             if not output_name:
                 title = page_title.replace('_哔哩哔哩_bilibili', '').strip()
                 output_name = clean_filename(title, f"bilibili_{bvid}") + '.mp4'
-            output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+            output_path = os.path.join(output_dir(), output_name)
             size = download_file(video_url, output_path, 'https://www.bilibili.com/',
                                  {'Origin': 'https://www.bilibili.com'})
             print(f"[5/5] 下载完成: {output_path} ({size / 1048576:.1f}MB)")
@@ -725,7 +728,7 @@ def download_bilibili(url, output_name=None):
         title = page_title.replace('_哔哩哔哩_bilibili', '').strip()
         output_name = clean_filename(title, f"bilibili_{bvid}") + '.mp4'
 
-    output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+    output_path = os.path.join(output_dir(), output_name)
 
     # ffmpeg 合并
     print(f"[5/5] ffmpeg 合并音视频...")
@@ -787,7 +790,7 @@ def download_tiktok_cdp(url, output_name=None):
     elif not output_name.endswith('.mp4'):
         output_name += '.mp4'
 
-    output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+    output_path = os.path.join(output_dir(), output_name)
 
     last_err = None
     for endpoint in cdp_endpoints:
@@ -1042,7 +1045,7 @@ def download_tiktok_tikwm(url, output_name=None):
         output_name = f'tiktok_{final_vid}.mp4'
     elif not output_name.endswith('.mp4'):
         output_name += '.mp4'
-    output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+    output_path = os.path.join(output_dir(), output_name)
 
     req2 = urllib.request.Request(play_url, headers={
         'User-Agent': UA,
@@ -1164,7 +1167,7 @@ def download_ytdlp(url, output_name=None):
         sys.exit(1)
 
     url = extract_url(url)
-    out_dir = os.path.expanduser('~/Downloads')
+    out_dir = output_dir()
     print(f"[1/2] 使用 yt-dlp 下载: {url}")
 
     cmd = ytdlp_cmd + [
@@ -1192,7 +1195,7 @@ def download_ytdlp(url, output_name=None):
         print(f"yt-dlp 下载失败 (exit {result.returncode})")
         sys.exit(1)
 
-    print("下载完成，文件保存在 ~/Downloads/")
+    print(f"下载完成，文件保存在 {output_dir()}/")
 
 # ── 入口 ──────────────────────────────────────────────────
 
