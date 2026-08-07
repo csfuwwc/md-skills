@@ -1,0 +1,4 @@
+interface:
+  display_name: "TikHub 查询"
+  short_description: "按当前飞书员工标记用量并查询内部 TikHub 网关"
+  default_prompt: "Use $tikhub-query to query a TikTok video through the company-internal metered gateway."

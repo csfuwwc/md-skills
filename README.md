@@ -22,6 +22,9 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | [aihot](skills/aihot/) | 查询 AI HOT 的中文 AI 资讯、精选、当前热点和日报。当用户问今天或最近的 AI 新闻、AI 圈动态、大模型或产品发布、OpenAI/Anthropic/Google 最近发布、AI 论文、AI 日报、AI HOT 精选、当前最热事件时使用。必须通过 aihot.virxact.com 的公开只读 API 获取当前数据，不凭训练记忆回答新闻。不需要 API Key 或 MCP server。 |
 | [skill-publisher](skills/skill-publisher/) | 将 ~/.agents/skills 中选定的 skill 直接发布到 GitHub 仓库，依次完成临时克隆、同步、提交、推送和自动清理。适用于“发布新 skill”、“同步更新 skill”、“按标记批量发布 skill”。支持 dry-run、按名称发布、按 .publish 标记发布、可选 prune。 |
 | [wechat-scraper](skills/wechat-scraper/) | 通过自建安全网关抓取公众号正文、扫码登录并查询最近文章列表 |
+| [funcinating-guides](skills/funcinating-guides/) | 为 Funcinating(范趣町)Shopify guides 博客写「能带流量、能留人、可直接发布」的长文指南。 |
+| [oss-manager](skills/oss-manager/) | 达人/社媒素材库的入库与取用 —— 把小红书等平台的合作素材(图/视频/文案)归档进阿里 OSS 并登记到飞书「达人·素材」表,以及按 IP/表现/授权条件检索素材,供独立站 blog、news、站外引流帖复用。触发场景:素材入库、素材归档、找素材、达人素材、素材库、把这条笔记存下来、写文章要配图找现成素材。 |
+| [tikhub-query](skills/tikhub-query/) | 按当前飞书员工标记用量并查询内部 TikHub 网关 |
 
 ## 安装
 
@@ -54,7 +57,7 @@ npx skills add https://github.com/csfuwwc/md-skills --skill douyin-scraper
 自动安装到 `~/.cursor/skills/` 和 `~/.claude/skills/` 等目录，支持 [skills.sh](https://skills.sh/csfuwwc/md-skills/video-download) 生态。
 
 可替换 `--skill` 为以下任一值：
-`bilibili-keywords-scraper` `douyin-scraper` `weibo-scraper` `xiaohongshu-scraper` `imap-smtp-email` `feishu-cli-manager` `video-download` `seedance-prompt` `skill-vetter` `humanizer` `humanizer-zh` `funcinating-news` `shopify` `aihot` `skill-publisher` `wechat-scraper`
+`bilibili-keywords-scraper` `douyin-scraper` `weibo-scraper` `xiaohongshu-scraper` `imap-smtp-email` `feishu-cli-manager` `video-download` `seedance-prompt` `skill-vetter` `humanizer` `humanizer-zh` `funcinating-news` `shopify` `aihot` `skill-publisher` `wechat-scraper` `funcinating-guides` `oss-manager` `tikhub-query`
 
 ### curl 一键安装
 
