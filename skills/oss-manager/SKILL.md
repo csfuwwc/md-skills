@@ -65,7 +65,10 @@ mdfile/
 - 素材ID:`xhs_<noteid>` / `xhslink_<码>`(从链接)、`c_<日期>_<随机>`(达人交付)、`g_<日期>_<随机>`(自产)
 - 文件名代码统一发号,原始文件名记进表「备注」
 - **只增不改**:加工产出永远开新 `g_` 文件夹,不覆盖旧文件
-- 读取 URL 用 `https://mdfile.oss-cn-beijing.aliyuncs.com/<key>`;**`vd.moimg.net` 的 HTTPS 证书不匹配,别用**
+- 读取 URL 用 `https://vd.moimg.net/<key>`(bucket 绑的自定义域名,与「内容资产」表口径一致)。
+  **别用默认 endpoint `mdfile.oss-cn-beijing.aliyuncs.com`** —— 阿里云对默认域名强加
+  `Content-Disposition: attachment` + `x-oss-force-download`,浏览器只能下载不能预览,
+  上传时设 header 也压不掉,只能换域名
 - 分类维度(IP / 标签 / 用途)一律留在表字段,不进路径——分类会变,OSS 没有移动
 
 ## 取用素材
@@ -98,6 +101,6 @@ lark-cli api POST /open-apis/bitable/v1/apps/BkRCb9uKjaN8VzsgGDZciqRxnDc/tables/
 ## 常见问题
 
 - **`lark-cli` 报 99991679**:身份错了,换 `personal-li-shoushou`。
-- **上传成功但 URL 打不开**:是不是写成了 `vd.moimg.net`,换 `mdfile.oss-cn-beijing.aliyuncs.com`。
+- **链接点开是下载不是预览**:用成默认 endpoint 了,换 `vd.moimg.net`。
 - **想确认某素材是否已归档**:查表「状态」,别去 OSS 找(列目录会 403)。
 - **`ModuleNotFoundError: alibabacloud_oss_v2`**:Stagehand 的 venv 里装一下(`uv pip install --python .venv/bin/python alibabacloud-oss-v2`),它在 pyproject 里但历史上没装过。
