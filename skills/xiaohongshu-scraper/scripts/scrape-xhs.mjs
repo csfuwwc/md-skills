@@ -133,7 +133,26 @@ function toResultFromNote({ url, finalUrl, note }, options) {
     body: [title, desc].filter(Boolean).join("\n"),
     likedCount: normalizeCount(interact.likedCount ?? interact.niceCount ?? note.likes, options.missingCountAsZero),
     collectedCount: normalizeCount(interact.collectedCount ?? note.collects, options.missingCountAsZero),
+    commentCount: normalizeCount(interact.commentCount ?? note.comments, options.missingCountAsZero),
+    noteType: String(note.type || "").toLowerCase() === "video" ? "video" : "image",
+    publishedAt: Number.isFinite(Number(note.time)) && Number(note.time) > 0 ? Number(note.time) : null,
+    imageUrls: extractImageUrls(note),
   };
+}
+
+// 每张图取最大的可用渲染版本。原图拿不到——去掉处理参数一律 403,能下的都带小红书水印,
+// 所以这些图只能内部参考,不能对外发布。
+function extractImageUrls(note) {
+  const urls = [];
+  for (const image of note.imageList || []) {
+    const byScene = {};
+    for (const info of image.infoList || []) {
+      if (info && info.imageScene && info.url) byScene[info.imageScene] = info.url;
+    }
+    const url = byScene.H5_DTL || byScene.H5_PRV || image.url;
+    if (url) urls.push(String(url));
+  }
+  return urls;
 }
 
 async function scrapeStatic(url, options) {

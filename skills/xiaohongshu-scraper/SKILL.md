@@ -51,6 +51,24 @@ The Base entrypoint uses a local platform lock at `/tmp/social-scraper-locks/xia
 6. Write only storage fields such as `正文`, `点赞数`, `收藏数`, `抓取时间`, and confirmed terminal `抓取状态`. Use `lark-base` for Base commands.
 7. Process in very small batches. Default: 3-5 records when using a logged-in browser, 10 records only for static H5. Stop when failures cluster.
 
+## `scrape-xhs.mjs --json` Output
+
+```json
+{"ok": true, "url": "...", "finalUrl": "...", "noteId": "6a35...",
+ "title": "...", "desc": "...", "body": "title\ndesc",
+ "noteType": "video|image", "publishedAt": 1781884007000,
+ "likedCount": 198, "collectedCount": 130, "commentCount": 8,
+ "imageUrls": ["https://sns-webpic-qc.xhscdn.com/..."]}
+```
+
+`imageUrls` takes the largest available rendition per image (`H5_DTL` > `H5_PRV`). The original
+is not reachable — stripping the processing parameters returns 403, and every downloadable
+rendition carries the Xiaohongshu watermark plus whatever caption the creator burned in. Treat
+these images as internal reference only; they are not publishable assets.
+
+Counts are `null` when the page omits them, unless `--missing-count-as-zero` is passed. A `null`
+count means "not reported", not zero.
+
 Do not wrap `scrape-xhs.mjs --browser` in a shell loop for Base work. It is a lower-level scraper; use `process-lark-xhs.mjs` so status filtering, failure fuses, and Base writes stay consistent.
 
 ## Lark Status Rules
