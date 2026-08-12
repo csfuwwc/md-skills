@@ -24,6 +24,7 @@ import urllib.request
 import urllib.parse
 import shutil
 import tempfile
+import functools
 from datetime import datetime
 
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -493,6 +494,27 @@ def download_wechat_channels(url, output_name=None):
     print(f'       元数据: {output_path}.meta.json')
     return output_path
 
+
+def wrap_engine_errors(what):
+    """把引擎(Playwright)抛的异常统一包成 RuntimeError。
+
+    不包的话有两个后果:顶层 handler 接不住 → 用户看到一屏 traceback;
+    调用方的兜底(回退 yt-dlp)也接不住 → 明明有备用引擎却直接死。
+    """
+    def decorate(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except RuntimeError:
+                raise
+            except Exception as exc:
+                raise RuntimeError(f"{what}: {type(exc).__name__}: {exc}") from exc
+        return wrapper
+    return decorate
+
+
+@wrap_engine_errors('无头浏览器抓取失败')
 def launch_browser_and_capture(page_url, video_filter_fn, wait_s=10, extra_wait_s=5, platform=None):
     """
     无头浏览器访问页面，通过 video_filter_fn 过滤网络请求捕获视频 CDN URL。
@@ -537,6 +559,7 @@ def launch_browser_and_capture(page_url, video_filter_fn, wait_s=10, extra_wait_
 
     return video_cdn_url, page_title
 
+@wrap_engine_errors('无头浏览器执行失败')
 def launch_browser_and_eval(page_url, js_code, wait_s=5, platform=None):
     """无头浏览器访问页面并执行 JS，返回 (result, page_title)"""
     from playwright.sync_api import sync_playwright
@@ -589,11 +612,15 @@ def download_douyin(url, output_name=None):
         u = resp.url
         return 'douyinvod.com' in u and 'video_mp4' in u
 
-    cdn_url, page_title = launch_browser_and_capture(page_url, is_douyin_video, platform='douyin')
+    try:
+        cdn_url, page_title = launch_browser_and_capture(page_url, is_douyin_video, platform='douyin')
+    except RuntimeError as exc:
+        print(f"  Playwright 失败: {exc}")
+        cdn_url = None
 
     if not cdn_url:
-        print("错误: 未能捕获到视频CDN地址")
-        sys.exit(1)
+        print("  改用 yt-dlp...")
+        return download_ytdlp(page_url, output_name, platform='douyin')
 
     print(f"[3/4] 捕获到视频地址，开始下载...")
 
@@ -628,11 +655,15 @@ def download_xiaohongshu(url, output_name=None):
             return True
         return False
 
-    cdn_url, page_title = launch_browser_and_capture(url, is_xhs_video, platform='xiaohongshu')
+    try:
+        cdn_url, page_title = launch_browser_and_capture(url, is_xhs_video, platform='xiaohongshu')
+    except RuntimeError as exc:
+        print(f"  Playwright 失败: {exc}")
+        cdn_url = None
 
     if not cdn_url:
-        print("错误: 未能捕获到视频CDN地址（可能是图文笔记而非视频）")
-        sys.exit(1)
+        print("  改用 yt-dlp...")
+        return download_ytdlp(url, output_name, platform='xiaohongshu')
 
     print(f"[3/4] 捕获到视频地址，开始下载...")
 
@@ -647,7 +678,7 @@ def download_xiaohongshu(url, output_name=None):
 
 # ── B站下载 ───────────────────────────────────────────────
 
-def download_bilibili(url, output_name=None):
+def download_bilibili_playwright(url, output_name=None):
     print(f"[1/5] 解析B站链接: {url}")
 
     # 短链跳转
@@ -753,6 +784,15 @@ def download_bilibili(url, output_name=None):
 
     size = os.path.getsize(output_path) / 1048576
     print(f"下载完成: {output_path} ({size:.1f}MB)")
+
+def download_bilibili(url, output_name=None):
+    """优先使用 yt-dlp；失败时回退现有 Playwright 解析链路。"""
+    print("[B站] 优先使用 yt-dlp...")
+    try:
+        return download_ytdlp(url, output_name, platform='bilibili')
+    except RuntimeError as exc:
+        print(f"[B站] yt-dlp 失败，回退 Playwright: {exc}")
+        return download_bilibili_playwright(url, output_name)
 
 # ── TikTok 下载（CDP 优先，失败回退 yt-dlp） ────────────────
 
@@ -1158,13 +1198,71 @@ def extract_url(text):
     m = re.search(r'https?://[^\s"\'<>\]]+', text)
     return m.group(0).rstrip('.,;!?)') if m else text.strip()
 
-def download_ytdlp(url, output_name=None):
-    """使用 yt-dlp 下载视频（支持 YouTube / Twitter / Instagram 等 1700+ 站点）"""
+def create_ytdlp_cookie_file(platform):
+    """把本 Skill 保存的单平台 Playwright Cookie 临时转成 Netscape 格式。"""
+    if not platform:
+        return None
+
+    source_path = get_cookie_path(platform)
+    if not os.path.exists(source_path):
+        return None
+
+    try:
+        with open(source_path, encoding='utf-8') as handle:
+            cookies = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"  警告: 无法读取 {platform} Cookie: {exc}")
+        return None
+
+    now = datetime.now().timestamp()
+    valid_cookies = []
+    for cookie in cookies:
+        expires = cookie.get('expires', 0) or 0
+        if expires > 0 and expires < now:
+            continue
+        if not all(cookie.get(key) for key in ('domain', 'name')):
+            continue
+        valid_cookies.append(cookie)
+
+    if not valid_cookies:
+        return None
+
+    handle = tempfile.NamedTemporaryFile(
+        mode='w',
+        encoding='utf-8',
+        prefix=f'video_download_{platform}_',
+        suffix='.cookies.txt',
+        delete=False,
+    )
+    try:
+        os.chmod(handle.name, 0o600)
+        handle.write('# Netscape HTTP Cookie File\n')
+        for cookie in valid_cookies:
+            domain = str(cookie['domain']).replace('\t', '').replace('\n', '')
+            include_subdomains = 'TRUE' if domain.startswith('.') else 'FALSE'
+            path = str(cookie.get('path') or '/').replace('\t', '').replace('\n', '')
+            secure = 'TRUE' if cookie.get('secure') else 'FALSE'
+            raw_expires = int(cookie.get('expires', 0) or 0)
+            expires = raw_expires if raw_expires > 0 else 0
+            name = str(cookie['name']).replace('\t', '').replace('\n', '')
+            value = str(cookie.get('value', '')).replace('\t', '').replace('\n', '')
+            handle.write(
+                f'{domain}\t{include_subdomains}\t{path}\t{secure}\t{expires}\t{name}\t{value}\n'
+            )
+    except Exception:
+        handle.close()
+        if os.path.exists(handle.name):
+            os.remove(handle.name)
+        raise
+    else:
+        handle.close()
+    return handle.name
+
+def download_ytdlp(url, output_name=None, platform=None):
+    """使用 yt-dlp 下载；可仅注入本 Skill 保存的对应平台 Cookie。"""
     ytdlp_cmd = get_ytdlp_command()
     if not ytdlp_cmd:
-        print("错误: 未安装 yt-dlp")
-        print("安装: brew install yt-dlp  或  pip3 install yt-dlp")
-        sys.exit(1)
+        raise RuntimeError("未安装 yt-dlp；请执行 brew install yt-dlp 或 pip3 install yt-dlp")
 
     url = extract_url(url)
     out_dir = output_dir()
@@ -1179,6 +1277,11 @@ def download_ytdlp(url, output_name=None):
         '--newline',
     ]
 
+    cookie_path = create_ytdlp_cookie_file(platform)
+    if cookie_path:
+        cmd += ['--cookies', cookie_path]
+        print(f"  已注入 {platform} 的已保存 Cookie")
+
     if output_name:
         if not output_name.endswith('.mp4'):
             output_name += '.mp4'
@@ -1189,13 +1292,19 @@ def download_ytdlp(url, output_name=None):
     cmd.append(url)
 
     print(f"[2/2] 开始下载...")
-    result = subprocess.run(cmd, text=True)
+    try:
+        result = subprocess.run(cmd, text=True)
+    finally:
+        if cookie_path and os.path.exists(cookie_path):
+            os.remove(cookie_path)
 
     if result.returncode != 0:
-        print(f"yt-dlp 下载失败 (exit {result.returncode})")
-        sys.exit(1)
+        raise RuntimeError(f"yt-dlp 下载失败 (exit {result.returncode})")
 
-    print(f"下载完成，文件保存在 {output_dir()}/")
+    print(f"下载完成，文件保存在 {out_dir}/")
+    if output_name:
+        return os.path.join(out_dir, output_name)
+    return out_dir
 
 # ── 入口 ──────────────────────────────────────────────────
 

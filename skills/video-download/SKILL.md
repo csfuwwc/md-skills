@@ -13,7 +13,7 @@ description: Canonical social-video download skill for all supported platforms a
 - 当任务来自飞书多维表格（Base）/表格批处理时，下载动作也必须调用本 skill 的 `scripts/download.py`，不要在业务脚本里另写直连下载器。
 - 需要正文/点赞/收藏时，可以在业务脚本里各自抓取；但“视频文件获取”必须复用本 skill 的下载链路与校验能力。
 
-从分享链接下载视频到本地。视频号使用用户配置的自托管解析器取得临时直链，抖音/小红书/B站使用 Playwright 无头浏览器，TikTok 优先使用真实浏览器 CDP 抓流，其他站点使用 yt-dlp。
+从分享链接下载视频到本地。视频号使用用户配置的自托管解析器取得临时直链；B站优先使用 yt-dlp，失败后回退 Playwright；抖音/小红书优先使用 Playwright，抓流失败后回退 yt-dlp；TikTok 优先使用真实浏览器 CDP 抓流。
 
 ## 下载流程
 
@@ -63,23 +63,35 @@ python3 ./scripts/download.py "<分享文本或链接>" [输出文件名.mp4]
 
 ## 平台支持
 
-脚本自动识别平台，优先使用 Playwright，其余 fallback 到 yt-dlp：
+脚本自动识别平台，并按平台使用不同的主引擎与兜底引擎：
 
 | 平台 | 支持的链接格式 | 引擎 | 需要登录 | 备注 |
 |------|---------------|------|---------|------|
 | 微信视频号 | `weixin.qq.com/sph/xxx`、`channels.weixin.qq.com/finder-preview/pages/sph?id=xxx` | 自托管解析器 + 直链下载 | 解析器端需要 | 优先 H.264，下载后用 ffprobe 校验 |
-| 抖音 | `v.douyin.com/xxx` 短链、`www.douyin.com/video/xxx`、`modal_id=xxx` | Playwright | 否 | 抓网络请求 |
-| 小红书 | `xiaohongshu.com/discovery/item/xxx`、`explore/xxx`、`xhslink.com/xxx` | Playwright | 否 | 抓网络请求 |
-| B站 | `bilibili.com/video/BVxxx`、`b23.tv/xxx` 短链 | Playwright | 推荐 | 解析 `__playinfo__`，需要 ffmpeg |
+| 抖音 | `v.douyin.com/xxx` 短链、`www.douyin.com/video/xxx`、`modal_id=xxx` | Playwright→yt-dlp | 视风控 | 优先抓网络请求；失败后使用已保存 Cookie 回退 |
+| 小红书 | `xiaohongshu.com/discovery/item/xxx`、`explore/xxx`、`xhslink.com/xxx` | Playwright→yt-dlp | 视内容 | 优先抓网络请求；失败后使用已保存 Cookie 回退 |
+| B站 | `bilibili.com/video/BVxxx`、`b23.tv/xxx` 短链 | yt-dlp→Playwright | 推荐 | yt-dlp 处理清晰度与音视频合并；需要 ffmpeg |
 | TikTok | `tiktok.com/@user/video/xxx`、`vm.tiktok.com/xxx` | CDP→tikwm→yt-dlp | 推荐 | 优先真实浏览器 CDP；app-only/shop 场景自动尝试 tikwm 兜底 |
 | YouTube | `youtube.com/watch?v=xxx`、`youtu.be/xxx` | yt-dlp | 否 | |
 | Twitter/X | `x.com/xxx/status/xxx`、`twitter.com/...` | yt-dlp | 否 | |
 | Instagram | `instagram.com/reel/xxx`、`instagram.com/p/xxx` | yt-dlp | 否 | 私密内容需登录 |
 | 其他 | 任意视频链接 | yt-dlp | 视站点 | 支持 1700+ 站点 |
 
+- **回退条件包括「主引擎崩溃」**，不只是「没抓到地址」：Playwright 抛的异常会被包成
+  `RuntimeError`，由调用方接住转兜底引擎；到顶层也只打一行错误，不会甩 traceback
 - 输出文件名可选，默认从视频标题生成
 - 文件保存到 `~/Downloads/`
-- 依赖：`playwright`（抖音/小红书/B站）、`yt-dlp`（其他站点）、`ffmpeg`
+- 依赖：`playwright`、`yt-dlp`、`ffmpeg`（B站及分离音视频格式合并）
+
+## B站、抖音与小红书回退策略
+
+按以下顺序下载：
+
+1. B站：`yt-dlp → Playwright`。
+2. 抖音、小红书：`Playwright → yt-dlp`。
+3. yt-dlp 需要 Cookie 时，只使用 `~/.config/video-download/<平台>_cookies.json` 中对应平台的 Cookie。
+4. 脚本把该平台 Cookie 临时转换为 Netscape 格式，权限设为 `0600`，yt-dlp 结束后立即删除；不要默认读取整个浏览器 Cookie 数据库。
+5. Cookie 缺失或失效时，先执行 `python3 ./scripts/download.py login <平台>`，再重试下载。
 
 ## 微信视频号专项说明
 
@@ -186,7 +198,7 @@ Cookie 保存在 `~/.config/video-download/<平台>_cookies.json`，自动检测
 ```bash
 pip3 install playwright && python3 -m playwright install chromium
 brew install ffmpeg   # B站视频合并需要
-brew install yt-dlp   # YouTube/Twitter/Instagram 等站点需要
+brew install yt-dlp   # B站、抖音/小红书兜底及通用站点需要
 ```
 
 ## 故障排除
@@ -195,6 +207,7 @@ brew install yt-dlp   # YouTube/Twitter/Instagram 等站点需要
 |------|----------|
 | SSL 证书错误 | 脚本已内置 `ssl._create_unverified_context` |
 | 未捕获到视频地址 | 增加等待时间，或内容需要登录/是图文非视频 |
+| 抖音/小红书回退 yt-dlp 后提示 fresh cookies | 执行对应平台的 `login` 命令，保存新 Cookie 后重试 |
 | curl/下载 403 | 检查 Referer 头是否匹配平台域名 |
 | B站 ffmpeg 不存在 | `brew install ffmpeg` |
 | B站画质低 | 执行 `login bilibili` 登录后重新下载 |
