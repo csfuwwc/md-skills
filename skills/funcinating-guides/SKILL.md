@@ -136,7 +136,16 @@ mutation { articleCreate(article: { blogId: "...", title: "...", handle: "...",
 1. **FAQ 体检**(机器查,零容忍):
    `re.findall(r'<p[^>]*>\s*<strong>[^<]{5,200}[??]</strong>\s*[^<]{40,}', faq节)` 必须为空;
    `<h3>…?</h3>` 数量 = FAQ 组数。
-2. humanizer 过稿(中文版 humanizer-zh);
+2. humanizer 过稿(中文版 humanizer-zh)——**必须跑完整三步,不许只跑机器可查的那半**:
+   ①起草 → ②停下来自问「这段为什么一眼就是 AI 写的」并逐条写出答案 → ③按答案重写。
+   零破折号 / 零弯引号 / 无 AI 高频词 / 正文无装饰性加粗 / 句长交错,这五项只是**硬指标**,
+   全绿**不等于**过稿。真正要靠判断抓的是:权威腔开场(「The honest part:」「The real question is」)、
+   格言化表达(「X is the Y of Z」「where the odds are least unkind」)、同义词轮换
+   (同一段里 sits at / sits outside / sits between)、每句都像金句的碎句堆叠、
+   问一句自答一句的假坦诚(「Chasing rather than collecting? 」)。
+   这些机器正则一条都查不出来。
+   反面教材:2026-08-12 写 desk / vinyl / plush 三篇时只跑了硬指标就报「humanizer 通过」,
+   判断轮整个跳过——同一轮里概率篇跑了完整流程,改掉了上面列举的四类问题,对比明显。
 3. 内链:**≥3 个集合页链接**(2026-08-12 上调,原为 ≥1)、相对路径、无国家前缀、无 UTM。
    为什么加码:2026-08-11 查到 TARTI 合集页在「tarti」主词上被自家博客截胡(博客位置 6.9、
    合集页接不到),根因是**只有 2 篇文章链 /collections/tarti,而 GISMOW 有 7 篇**——
