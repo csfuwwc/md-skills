@@ -12,7 +12,8 @@ description: 达人/社媒素材库的入库与取用 —— 把小红书等平�
 
 | 组件 | 位置 |
 |---|---|
-| 代码 | `stagehand/creator_assets/`(入库 + 存量回灌)、`stagehand/scraping/xhs.py`(笔记页解析) |
+| 代码 | Stagehand 仓 `python/stagehand/creator_assets/`(入库 + 存量回灌)、`scraping/xhs.py`(笔记页解析);本机默认 `~/Stagehand`,可用 `STAGEHAND` 环境变量指定 |
+| 依赖的 skill | `video-download`(唯一下载入口,`--with-video` 时子进程调用)、`lark-cli`(飞书读写) |
 | 「达人·素材」表 | app `BkRCb9uKjaN8VzsgGDZciqRxnDc` / table `tblxpajEH9CoNcQa` |
 | 血缘下游「发布·内容资产」 | 同 base / table `tbl6oVFshNxbwOxp`,来源类型「达人二创」+ 字段「关联达人素材」 |
 | OSS | bucket `mdfile`,前缀 `assets/`(同桶的 `uploads/` 是 Stagehand 运营上传区,**不碰**) |
@@ -31,8 +32,20 @@ description: 达人/社媒素材库的入库与取用 —— 把小红书等平�
 
 ## 跑
 
+**先确认三件事,缺一条就别往下跑**:
+
 ```bash
-cd <Stagehand>/python && export PYTHONPATH=.
+# ① 仓在不在(默认 ~/Stagehand;没有就 git clone git@github.com:Modian-com/Stagehand.git)
+STAGEHAND=${STAGEHAND:-~/Stagehand} && cd $STAGEHAND/python && export PYTHONPATH=.
+# ② OSS SDK 在不在(它在 pyproject 里但历史上没装过;该 venv 没 pip,只能 uv)
+.venv/bin/python -c "import alibabacloud_oss_v2" || uv pip install --python .venv/bin/python alibabacloud-oss-v2
+# ③ STS 网关通不通(内网无鉴权,期望 "code":0;不通说明不在公司网络,整条流跑不了)
+curl -s -m 10 http://api-ai.modianinc.com:8080/oss/get_sts | head -c 60
+```
+
+`--with-video` 还需要 playwright + chromium(`python3 -m playwright install chromium`),不用视频就不管。
+
+```bash
 # ① 达人交付的原片 → 发 c_ 号
 .venv/bin/python -m stagehand.creator_assets.cli ingest --delivery --creator "达人昵称" video.mp4 --note note.md
 # ② 我们自己生成/加工的成品 → 发 g_ 号
