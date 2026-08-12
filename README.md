@@ -4,24 +4,83 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 
 ## Skills
 
-| Skill | 描述 |
-|-------|------|
-| [bilibili-keywords-scraper](skills/bilibili-keywords-scraper/) | B站关键词候选UP抓取与飞书候选池回填 |
-| [douyin-scraper](skills/douyin-scraper/) | 抖音链接内容抓取与多维表格回填 |
-| [weibo-scraper](skills/weibo-scraper/) | 微博链接内容抓取与多维表格回填 |
-| [xiaohongshu-scraper](skills/xiaohongshu-scraper/) | 小红书内容抓取（正文/互动/元数据）与表格回填 |
-| [imap-smtp-email](skills/imap-smtp-email/) | 基于 IMAP/SMTP 的收发信与附件处理（多账号） |
-| [feishu-cli-manager](skills/feishu-cli-manager/) | 飞书/Lark CLI 安装、配置与授权刷新维护 |
-| [video-download](skills/video-download/) | 通用社媒视频下载（抖音/小红书/B站/TikTok/YouTube 等） |
+<!-- skills:begin -->
+
+共 20 个,按在工作流里的位置分组。
+
+### 情报
+
+> 看外面在发生什么,喂选题
+
+| Skill | 做什么 |
+|---|---|
+| [aihot](skills/aihot/) | 查 AI HOT 的中文 AI 资讯、热点与日报(公开只读 API,不凭记忆答新闻) |
+| [hot-topics](skills/hot-topics/) | 拉微博热搜和 B 站热门榜,喂选题 |
+
+### 内容抓取
+
+> 给链接或关键词,拿回内容和数据
+
+| Skill | 做什么 |
+|---|---|
+| [douyin-scraper](skills/douyin-scraper/) | 抖音链接抓正文/互动/视觉内容,回填飞书表 |
+| [tikhub-query](skills/tikhub-query/) | 走公司内部计费网关查 TikTok 视频详情 |
+| [video-download](skills/video-download/) | 通用社媒视频下载(抖音/小红书/B站/TikTok/YouTube 等) |
+| [wechat-scraper](skills/wechat-scraper/) | 经自建网关抓公众号正文与历史文章列表 |
+| [weibo-scraper](skills/weibo-scraper/) | 微博链接抓正文/互动/视觉内容,回填飞书表 |
+| [xiaohongshu-scraper](skills/xiaohongshu-scraper/) | 小红书笔记抓正文/互动/元数据,回填飞书表 |
+
+### 达人发掘
+
+> 找人,不是找内容
+
+| Skill | 做什么 |
+|---|---|
+| [bilibili-creator-finder](skills/bilibili-creator-finder/) | 按关键词搜 B 站候选 UP 并回填飞书候选池(不发私信、不管跟进) |
+
+### 存储与通道
+
+> 东西往哪儿放、消息怎么发
+
+| Skill | 做什么 |
+|---|---|
+| [feishu-cli-manager](skills/feishu-cli-manager/) | lark-cli 的安装、配置与授权刷新维护 |
+| [imap-smtp-email](skills/imap-smtp-email/) | IMAP/SMTP 多账号收发信与附件处理 |
+| [oss-upload](skills/oss-upload/) | 本地图片/视频/文件传阿里云 OSS,拿可公开引用的链接 |
+
+### 内容生产
+
+> 写和改
+
+| Skill | 做什么 |
+|---|---|
+| [humanizer](skills/humanizer/) | 去除英文文本的 AI 写作痕迹 |
+| [humanizer-zh](skills/humanizer-zh/) | 去除中文文本的 AI 味与翻译腔 |
 | [seedance-prompt](skills/seedance-prompt/) | 即梦 Seedance 2.0 视频脚本 Prompt 生成 |
-| [skill-vetter](skills/skill-vetter/) | 第三方 Skill 安装前的安全审查与风险分级 |
-| [humanizer](skills/humanizer/) | 去除英文文本的 AI 写作痕迹（基于维基百科 Signs of AI writing） |
-| [humanizer-zh](skills/humanizer-zh/) | 去除中文文本的 AI 味/翻译腔（humanizer 中文版） |
-| [funcinating-news](skills/funcinating-news/) | 基于新闻/话题生成 Funcinating 双语资讯（查证事实→五拍骨架→去AI味→发布到 Shopify news） |
-| [shopify](skills/shopify/) | Shopify 独立站商品上架流水线（同事提供素材，skill 全包 SEO/handle/metafield/FAQ/集合/多语言/写回上架；5 步·去审核·飞书表 SSOT） |
-| [aihot](skills/aihot/) | 查询 AI HOT 的中文 AI 资讯、精选、当前热点和日报。当用户问今天或最近的 AI 新闻、AI 圈动态、大模型或产品发布、OpenAI/Anthropic/Google 最近发布、AI 论文、AI 日报、AI HOT 精选、当前最热事件时使用。必须通过 aihot.virxact.com 的公开只读 API 获取当前数据，不凭训练记忆回答新闻。不需要 API Key 或 MCP server。 |
-| [skill-publisher](skills/skill-publisher/) | 将 ~/.agents/skills 中选定的 skill 直接发布到 GitHub 仓库，依次完成临时克隆、同步、提交、推送和自动清理。适用于“发布新 skill”、“同步更新 skill”、“按标记批量发布 skill”。支持 dry-run、按名称发布、按 .publish 标记发布、可选 prune。 |
-| [wechat-scraper](skills/wechat-scraper/) | 通过自建安全网关抓取公众号正文、扫码登录并查询最近文章列表 |
+
+### 范趣町业务
+
+> **只对范趣町有意义**,换个公司用不上
+
+| Skill | 做什么 |
+|---|---|
+| [funcinating-guides](skills/funcinating-guides/) | 给范趣町 Shopify guides 写能带流量、能留人的长文指南 |
+| [funcinating-news](skills/funcinating-news/) | 给范趣町 Shopify news 写双语资讯:查证→骨架→去 AI 味→发布 |
+| [shopify](skills/shopify/) | 范趣町 Shopify 上架流水线:SEO/handle/metafield/集合/多语言/写回上架 |
+
+### skill 自治
+
+> 管 skill 的 skill
+
+| Skill | 做什么 |
+|---|---|
+| [skill-publisher](skills/skill-publisher/) | 把本机选定的 skill 发布同步到 GitHub 仓库 |
+| [skill-vetter](skills/skill-vetter/) | 第三方 skill 安装前的安全审查与风险分级 |
+
+<!-- skills:end -->
+
+> 这张表由 `python3 tools/gen_readme.py` 从各 `SKILL.md` 的 frontmatter 生成,**别手改**。
+> 加了新 skill 就跑一次;`--check` 可在提交前校验是否漂了。
 
 ## 安装
 
@@ -54,7 +113,9 @@ npx skills add https://github.com/csfuwwc/md-skills --skill douyin-scraper
 自动安装到 `~/.cursor/skills/` 和 `~/.claude/skills/` 等目录，支持 [skills.sh](https://skills.sh/csfuwwc/md-skills/video-download) 生态。
 
 可替换 `--skill` 为以下任一值：
-`bilibili-keywords-scraper` `douyin-scraper` `weibo-scraper` `xiaohongshu-scraper` `imap-smtp-email` `feishu-cli-manager` `video-download` `seedance-prompt` `skill-vetter` `humanizer` `humanizer-zh` `funcinating-news` `shopify` `aihot` `skill-publisher` `wechat-scraper`
+<!-- skill-names:begin -->
+`aihot` `bilibili-creator-finder` `douyin-scraper` `feishu-cli-manager` `funcinating-guides` `funcinating-news` `hot-topics` `humanizer` `humanizer-zh` `imap-smtp-email` `oss-upload` `seedance-prompt` `shopify` `skill-publisher` `skill-vetter` `tikhub-query` `video-download` `wechat-scraper` `weibo-scraper` `xiaohongshu-scraper`
+<!-- skill-names:end -->
 
 ### curl 一键安装
 

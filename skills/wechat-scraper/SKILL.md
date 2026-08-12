@@ -1,5 +1,7 @@
 ---
 name: wechat-scraper
+category: 内容抓取
+short-description: 经自建网关抓公众号正文与历史文章列表
 description: Use the private Video-Picture-OSS-Auth WeChat gateway to fetch one public WeChat official-account article as HTML, JSON, Markdown, or text, or list the latest articles from the same official account. Trigger for 微信公众号文章抓取、公众号内容提取、公众号作者识别、最近文章链接和历史文章列表 requests.
 ---
 

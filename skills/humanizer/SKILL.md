@@ -1,5 +1,7 @@
 ---
 name: humanizer
+category: 内容生产
+short-description: 去除英文文本的 AI 写作痕迹
 version: 2.8.2
 description: |
   Remove signs of AI-generated writing from text. Use when editing or reviewing

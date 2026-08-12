@@ -1,5 +1,7 @@
 ---
 name: video-download
+category: 内容抓取
+short-description: 通用社媒视频下载(抖音/小红书/B站/TikTok/YouTube 等)
 description: Canonical social-video download skill for all supported platforms and table workflows. Always use this skill as the single download entrypoint when handling WeChat Channels/微信视频号, Douyin/抖音, Xiaohongshu/小红书, Bilibili/B站, TikTok, YouTube, Twitter/X, Instagram links, or when batch-processing Lark Base/Sheet rows that include social post URLs and need video files.
 ---
 
@@ -75,6 +77,8 @@ python3 ./scripts/download.py "<分享文本或链接>" [输出文件名.mp4]
 | Instagram | `instagram.com/reel/xxx`、`instagram.com/p/xxx` | yt-dlp | 否 | 私密内容需登录 |
 | 其他 | 任意视频链接 | yt-dlp | 视站点 | 支持 1700+ 站点 |
 
+- **回退条件包括「主引擎崩溃」**，不只是「没抓到地址」：Playwright 抛的异常会被包成
+  `RuntimeError`，由调用方接住转兜底引擎；到顶层也只打一行错误，不会甩 traceback
 - 输出文件名可选，默认从视频标题生成
 - 文件保存到 `~/Downloads/`
 - 依赖：`playwright`、`yt-dlp`、`ffmpeg`（B站及分离音视频格式合并）

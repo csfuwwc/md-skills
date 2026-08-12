@@ -1,5 +1,7 @@
 ---
 name: douyin-scraper
+category: 内容抓取
+short-description: 抖音链接抓正文/互动/视觉内容,回填飞书表
 description: Use when a user provides Douyin/抖音 links, v.douyin.com short links, asks to fetch 抖音 video text, likes, collections/favorites, video visual content, or wants to fill a Lark Base table from 抖音 links.
 ---
 

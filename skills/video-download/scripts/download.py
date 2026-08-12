@@ -24,6 +24,7 @@ import urllib.request
 import urllib.parse
 import shutil
 import tempfile
+import functools
 from datetime import datetime
 
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -298,6 +299,12 @@ def write_tiktok_meta(output_path, source, target_video_id=None, resolved_video_
     print(f"[TikTok/META] {meta_path}")
     return meta_path
 
+def output_dir():
+    """下载目录：默认 ~/Downloads，可用 VIDEO_DOWNLOAD_OUTPUT_DIR 覆盖（批处理场景常用）。"""
+    d = os.path.expanduser(os.environ.get('VIDEO_DOWNLOAD_OUTPUT_DIR', '~/Downloads'))
+    os.makedirs(d, exist_ok=True)
+    return d
+
 def download_file(cdn_url, output_path, referer, extra_headers=None):
     """下载文件到本地，支持大文件流式写入"""
     req = urllib.request.Request(cdn_url)
@@ -452,10 +459,7 @@ def download_wechat_channels(url, output_name=None):
     elif not output_name.lower().endswith('.mp4'):
         output_name += '.mp4'
 
-    out_dir = os.path.expanduser(
-        os.environ.get('VIDEO_DOWNLOAD_OUTPUT_DIR', '~/Downloads')
-    )
-    os.makedirs(out_dir, exist_ok=True)
+    out_dir = output_dir()
     output_path = os.path.join(out_dir, output_name)
 
     try:
@@ -490,6 +494,27 @@ def download_wechat_channels(url, output_name=None):
     print(f'       元数据: {output_path}.meta.json')
     return output_path
 
+
+def wrap_engine_errors(what):
+    """把引擎(Playwright)抛的异常统一包成 RuntimeError。
+
+    不包的话有两个后果:顶层 handler 接不住 → 用户看到一屏 traceback;
+    调用方的兜底(回退 yt-dlp)也接不住 → 明明有备用引擎却直接死。
+    """
+    def decorate(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except RuntimeError:
+                raise
+            except Exception as exc:
+                raise RuntimeError(f"{what}: {type(exc).__name__}: {exc}") from exc
+        return wrapper
+    return decorate
+
+
+@wrap_engine_errors('无头浏览器抓取失败')
 def launch_browser_and_capture(page_url, video_filter_fn, wait_s=10, extra_wait_s=5, platform=None):
     """
     无头浏览器访问页面，通过 video_filter_fn 过滤网络请求捕获视频 CDN URL。
@@ -534,6 +559,7 @@ def launch_browser_and_capture(page_url, video_filter_fn, wait_s=10, extra_wait_
 
     return video_cdn_url, page_title
 
+@wrap_engine_errors('无头浏览器执行失败')
 def launch_browser_and_eval(page_url, js_code, wait_s=5, platform=None):
     """无头浏览器访问页面并执行 JS，返回 (result, page_title)"""
     from playwright.sync_api import sync_playwright
@@ -586,10 +612,14 @@ def download_douyin(url, output_name=None):
         u = resp.url
         return 'douyinvod.com' in u and 'video_mp4' in u
 
-    cdn_url, page_title = launch_browser_and_capture(page_url, is_douyin_video, platform='douyin')
+    try:
+        cdn_url, page_title = launch_browser_and_capture(page_url, is_douyin_video, platform='douyin')
+    except RuntimeError as exc:
+        print(f"  Playwright 失败: {exc}")
+        cdn_url = None
 
     if not cdn_url:
-        print("  Playwright 未捕获到视频CDN地址，回退 yt-dlp...")
+        print("  改用 yt-dlp...")
         return download_ytdlp(page_url, output_name, platform='douyin')
 
     print(f"[3/4] 捕获到视频地址，开始下载...")
@@ -598,7 +628,7 @@ def download_douyin(url, output_name=None):
         title = page_title.replace(' - 抖音', '').strip()
         output_name = clean_filename(title, f"douyin_{video_id}") + '.mp4'
 
-    output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+    output_path = os.path.join(output_dir(), output_name)
     size = download_file(cdn_url, output_path, 'https://www.douyin.com/')
     print(f"[4/4] 下载完成: {output_path} ({size / 1048576:.1f}MB)")
 
@@ -625,10 +655,14 @@ def download_xiaohongshu(url, output_name=None):
             return True
         return False
 
-    cdn_url, page_title = launch_browser_and_capture(url, is_xhs_video, platform='xiaohongshu')
+    try:
+        cdn_url, page_title = launch_browser_and_capture(url, is_xhs_video, platform='xiaohongshu')
+    except RuntimeError as exc:
+        print(f"  Playwright 失败: {exc}")
+        cdn_url = None
 
     if not cdn_url:
-        print("  Playwright 未捕获到视频CDN地址，回退 yt-dlp...")
+        print("  改用 yt-dlp...")
         return download_ytdlp(url, output_name, platform='xiaohongshu')
 
     print(f"[3/4] 捕获到视频地址，开始下载...")
@@ -638,7 +672,7 @@ def download_xiaohongshu(url, output_name=None):
         title = re.sub(r'小红书\s*[-–—]\s*你的生活兴趣社区', '', title).strip()
         output_name = clean_filename(title, f"xiaohongshu_{note_id}") + '.mp4'
 
-    output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+    output_path = os.path.join(output_dir(), output_name)
     size = download_file(cdn_url, output_path, 'https://www.xiaohongshu.com/')
     print(f"[4/4] 下载完成: {output_path} ({size / 1048576:.1f}MB)")
 
@@ -687,7 +721,7 @@ def download_bilibili_playwright(url, output_name=None):
             if not output_name:
                 title = page_title.replace('_哔哩哔哩_bilibili', '').strip()
                 output_name = clean_filename(title, f"bilibili_{bvid}") + '.mp4'
-            output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+            output_path = os.path.join(output_dir(), output_name)
             size = download_file(video_url, output_path, 'https://www.bilibili.com/',
                                  {'Origin': 'https://www.bilibili.com'})
             print(f"[5/5] 下载完成: {output_path} ({size / 1048576:.1f}MB)")
@@ -725,7 +759,7 @@ def download_bilibili_playwright(url, output_name=None):
         title = page_title.replace('_哔哩哔哩_bilibili', '').strip()
         output_name = clean_filename(title, f"bilibili_{bvid}") + '.mp4'
 
-    output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+    output_path = os.path.join(output_dir(), output_name)
 
     # ffmpeg 合并
     print(f"[5/5] ffmpeg 合并音视频...")
@@ -796,7 +830,7 @@ def download_tiktok_cdp(url, output_name=None):
     elif not output_name.endswith('.mp4'):
         output_name += '.mp4'
 
-    output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+    output_path = os.path.join(output_dir(), output_name)
 
     last_err = None
     for endpoint in cdp_endpoints:
@@ -1051,7 +1085,7 @@ def download_tiktok_tikwm(url, output_name=None):
         output_name = f'tiktok_{final_vid}.mp4'
     elif not output_name.endswith('.mp4'):
         output_name += '.mp4'
-    output_path = os.path.join(os.path.expanduser('~/Downloads'), output_name)
+    output_path = os.path.join(output_dir(), output_name)
 
     req2 = urllib.request.Request(play_url, headers={
         'User-Agent': UA,
@@ -1231,10 +1265,7 @@ def download_ytdlp(url, output_name=None, platform=None):
         raise RuntimeError("未安装 yt-dlp；请执行 brew install yt-dlp 或 pip3 install yt-dlp")
 
     url = extract_url(url)
-    out_dir = os.path.expanduser(
-        os.environ.get('VIDEO_DOWNLOAD_OUTPUT_DIR', '~/Downloads')
-    )
-    os.makedirs(out_dir, exist_ok=True)
+    out_dir = output_dir()
     print(f"[1/2] 使用 yt-dlp 下载: {url}")
 
     cmd = ytdlp_cmd + [

@@ -1,5 +1,7 @@
 ---
 name: feishu-cli-manager
+category: 存储与通道
+short-description: lark-cli 的安装、配置与授权刷新维护
 description: Use when the user asks to install Feishu/Lark CLI, configure lark-cli, connect an agent with Feishu CLI, check or refresh lark-cli auth, recover expired tokens, or start a Feishu device-flow login.
 ---
 

@@ -166,3 +166,63 @@ class PlatformFallbackTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EngineErrorWrappingTests(unittest.TestCase):
+    """Playwright 抛的异常必须包成 RuntimeError:
+    否则顶层 handler 接不住(用户看到一屏 traceback),调用方的 yt-dlp 兜底也接不住。"""
+
+    def test_arbitrary_exception_becomes_runtime_error(self):
+        @video_download.wrap_engine_errors("引擎挂了")
+        def boom():
+            raise ValueError("Execution context was destroyed")
+
+        with self.assertRaises(RuntimeError) as caught:
+            boom()
+
+        self.assertIn("引擎挂了", str(caught.exception))
+        self.assertIn("ValueError", str(caught.exception))
+
+    def test_runtime_error_passes_through_unchanged(self):
+        @video_download.wrap_engine_errors("引擎挂了")
+        def boom():
+            raise RuntimeError("原始信息")
+
+        with self.assertRaises(RuntimeError) as caught:
+            boom()
+
+        self.assertEqual(str(caught.exception), "原始信息")
+
+    def test_success_path_is_untouched(self):
+        @video_download.wrap_engine_errors("引擎挂了")
+        def fine(a, b=2):
+            return a + b
+
+        self.assertEqual(fine(1), 3)
+
+    def test_douyin_falls_back_when_playwright_crashes(self):
+        """崩溃和"没抓到地址"要走同一个兜底 —— 有备用引擎却因崩溃直接死是最亏的。"""
+        with mock.patch.object(
+            video_download, "launch_browser_and_capture",
+            side_effect=RuntimeError("无头浏览器抓取失败: Error: 页面被导航掉了"),
+        ), mock.patch.object(
+            video_download, "download_ytdlp", return_value="fallback-result",
+        ) as fallback:
+            result = video_download.download_douyin(
+                "https://www.douyin.com/video/7625857786269715752", "out.mp4")
+
+        self.assertEqual(result, "fallback-result")
+        self.assertEqual(fallback.call_args.kwargs.get("platform"), "douyin")
+
+    def test_xiaohongshu_falls_back_when_playwright_crashes(self):
+        with mock.patch.object(
+            video_download, "launch_browser_and_capture",
+            side_effect=RuntimeError("无头浏览器抓取失败: Error: 崩了"),
+        ), mock.patch.object(
+            video_download, "download_ytdlp", return_value="fallback-result",
+        ) as fallback:
+            result = video_download.download_xiaohongshu(
+                "https://www.xiaohongshu.com/explore/abc123", "out.mp4")
+
+        self.assertEqual(result, "fallback-result")
+        self.assertEqual(fallback.call_args.kwargs.get("platform"), "xiaohongshu")

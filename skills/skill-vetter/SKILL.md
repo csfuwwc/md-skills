@@ -1,5 +1,7 @@
 ---
 name: skill-vetter
+category: skill 自治
+short-description: 第三方 skill 安装前的安全审查与风险分级
 description: Security review protocol for Codex skills before installation, update, or execution. Use when the user asks to install, import, convert, trust, audit, review, or run a third-party skill from ClawHub/OpenClaw, GitHub, a zip/archive, pasted files, or any unknown source; also use when evaluating whether a skill is safe for Codex.
 ---
 
