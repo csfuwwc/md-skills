@@ -103,7 +103,10 @@ news 短资讯不归这里,用 funcinating-news。
   ④禁用 URL 动态裁剪参数(`?width=&height=&crop=`),尺寸一律在文件层面定死;
   ⑤范本=how-to-attach-bag-charm 的五张图,新文图片与它逐字节同构即正确。
 
-篇幅:3500-5000 字符 HTML(两篇范本分别 4958/3822),别灌水到万字。
+篇幅:3500-5000 字符 HTML 是**建议区间不是硬指标**(两篇范本分别 4958/3822),
+**上限可放宽到 6000**(owner 2026-08-12 确认)。超出别硬砍内容——为凑字数删掉一段有信息量的
+正文,比多 500 字符糟得多。真正要防的是灌水到万字。数据表、清单这类结构化标记不计入判断,
+按正文长度看。
 
 ## 写入 Shopify
 
@@ -134,7 +137,13 @@ mutation { articleCreate(article: { blogId: "...", title: "...", handle: "...",
    `re.findall(r'<p[^>]*>\s*<strong>[^<]{5,200}[??]</strong>\s*[^<]{40,}', faq节)` 必须为空;
    `<h3>…?</h3>` 数量 = FAQ 组数。
 2. humanizer 过稿(中文版 humanizer-zh);
-3. 内链:≥1 个集合页链接、相对路径、无国家前缀、无 UTM;
+3. 内链:**≥3 个集合页链接**(2026-08-12 上调,原为 ≥1)、相对路径、无国家前缀、无 UTM。
+   为什么加码:2026-08-11 查到 TARTI 合集页在「tarti」主词上被自家博客截胡(博客位置 6.9、
+   合集页接不到),根因是**只有 2 篇文章链 /collections/tarti,而 GISMOW 有 7 篇**——
+   文章给合集页的内链就是合集页在站内的权重来源,只链 1 个等于白写。
+   做法:只在正文已经提到那个东西的地方包 `<a>`,读起来自然;硬塞不相干的集合是负分。
+   品牌合集(gismow/tarti/calor/koucomi/moco)和场景合集(gifts-under-30/desk-companions/
+   bag-charms/vinyl-figures/plush/blind-box)都算,优先链本文真正在讲的那个。
 4. 四语言注册成功且 userErrors 为空,IP 名未被翻译;
 5. 发布后:GSC 对文章 URL 请求编入索引;
 6. 一周后回看 GA4(pagePath 含 /blogs/guides/):浏览量、人均停留——停留 <15s 说明首屏没钩住,回炉。
