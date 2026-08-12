@@ -1,5 +1,7 @@
 ---
 name: tikhub-query
+category: 内容抓取
+short-description: 走公司内部计费网关查 TikTok 视频详情
 description: Query TikTok video details through the company-internal metered TikHub HTTP gateway. Use when a user provides a TikTok video URL or asks for TikHub/TikTok data; the deterministic client reads the current lark-cli user's Feishu open_id and name and attaches them only for internal usage attribution.
 ---
 

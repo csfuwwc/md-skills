@@ -1,5 +1,7 @@
 ---
 name: funcinating-guides
+category: 范趣町业务
+short-description: 给范趣町 Shopify guides 写能带流量、能留人的长文指南
 description: 为 Funcinating(范趣町)Shopify guides 博客写「能带流量、能留人、可直接发布」的长文指南。
   模板取自 GA4 实测最优文章:流量骨架=labubu-alternatives-2026(60天浏览42,第二名5倍,蹭热词打法),
   留人要素=how-to-attach-bag-charm(人均停留72秒)。内置选题方法、结构硬规则(FAQ 必须 h3+p)、

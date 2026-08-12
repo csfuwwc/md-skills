@@ -1,8 +1,8 @@
 ---
-name: bilibili-keywords-scraper
+name: bilibili-creator-finder
+category: 达人发掘
+short-description: 按关键词搜 B 站候选 UP 并回填飞书候选池(不发私信、不管跟进)
 description: Use this skill when the user wants to collect Bilibili/B站 candidate UP creators from keyword search results or an already-filtered Bilibili search page, deduplicate by UP主页 mid, write/update a Lark Base candidate table, and optionally enrich each UP profile with fans, likes, plays, representative videos, and public contact info. This skill does not send DMs or manage outreach status.
-metadata:
-  short-description: B站候选UP抓取与飞书候选池回填
 ---
 
 # Bilibili UP Candidate Scraper
@@ -59,7 +59,7 @@ Do not commit user-specific config files into a skill repo.
 Dry-run from the currently open/filtered Bilibili search page:
 
 ```bash
-node ~/.agents/skills/bilibili-keywords-scraper/scripts/run_candidate_pipeline.mjs \
+node ~/.agents/skills/bilibili-creator-finder/scripts/run_candidate_pipeline.mjs \
   --config ./.bilibili-up-candidates.config.json \
   --keyword "示例关键词" \
   --mode current \
@@ -69,7 +69,7 @@ node ~/.agents/skills/bilibili-keywords-scraper/scripts/run_candidate_pipeline.m
 Write to table and enrich profile data:
 
 ```bash
-node ~/.agents/skills/bilibili-keywords-scraper/scripts/run_candidate_pipeline.mjs \
+node ~/.agents/skills/bilibili-creator-finder/scripts/run_candidate_pipeline.mjs \
   --config ./.bilibili-up-candidates.config.json \
   --keyword "示例关键词" \
   --mode current \
@@ -82,7 +82,7 @@ node ~/.agents/skills/bilibili-keywords-scraper/scripts/run_candidate_pipeline.m
 Navigate by keyword and sort, then write:
 
 ```bash
-node ~/.agents/skills/bilibili-keywords-scraper/scripts/run_candidate_pipeline.mjs \
+node ~/.agents/skills/bilibili-creator-finder/scripts/run_candidate_pipeline.mjs \
   --config ./.bilibili-up-candidates.config.json \
   --keyword "示例关键词" \
   --sort pubdate \
@@ -94,7 +94,7 @@ node ~/.agents/skills/bilibili-keywords-scraper/scripts/run_candidate_pipeline.m
 Collect search results only, without visiting UP homepages:
 
 ```bash
-node ~/.agents/skills/bilibili-keywords-scraper/scripts/run_candidate_pipeline.mjs \
+node ~/.agents/skills/bilibili-creator-finder/scripts/run_candidate_pipeline.mjs \
   --config ./.bilibili-up-candidates.config.json \
   --keyword "示例关键词" \
   --mode current \

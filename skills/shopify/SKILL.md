@@ -1,5 +1,7 @@
 ---
 name: shopify
+category: 范趣町业务
+short-description: 范趣町 Shopify 上架流水线:SEO/handle/metafield/集合/多语言/写回上架
 description: |
   Shopify 独立站(Funcinating/范趣町)新增商品的标准上架流水线。同事只管「提供素材」,
   skill 把 SEO/handle/metafield/FAQ/集合/结构化数据/多语言/写回上架 全包,只在缺输入、

@@ -1,5 +1,7 @@
 ---
 name: seedance-prompt
+category: 内容生产
+short-description: 即梦 Seedance 2.0 视频脚本 Prompt 生成
 description: 根据用户提供的图片和创作需求，生成专业的即梦 Seedance 2.0 视频脚本 Prompt。融合影视理论（景别、运镜、构图、色彩、声音设计）与 Seedance 2.0 多模态语法（@素材名引用）。专为潮玩手办/玩偶IP角色视频创作优化。当用户提到生成视频脚本、Seedance prompt、即梦提示词、AI视频分镜、视频脚本创作、玩偶视频时使用。
 ---
 

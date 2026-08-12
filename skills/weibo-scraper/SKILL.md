@@ -1,5 +1,7 @@
 ---
 name: weibo-scraper
+category: 内容抓取
+short-description: 微博链接抓正文/互动/视觉内容,回填飞书表
 description: Use when a user provides Weibo/微博 links, asks to fetch 微博 post text, likes, video visual content, or wants to fill a Lark Base table from 微博 links.
 ---
 

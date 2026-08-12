@@ -1,5 +1,7 @@
 ---
 name: skill-publisher
+category: skill 自治
+short-description: 把本机选定的 skill 发布同步到 GitHub 仓库
 description: 将 ~/.agents/skills 中选定的 skill 直接发布到 GitHub 仓库，依次完成临时克隆、同步、提交、推送和自动清理。适用于“发布新 skill”、“同步更新 skill”、“按标记批量发布 skill”。支持 dry-run、按名称发布、按 .publish 标记发布、可选 prune。
 ---
 

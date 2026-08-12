@@ -1,5 +1,7 @@
 ---
 name: funcinating-news
+category: 范趣町业务
+short-description: 给范趣町 Shopify news 写双语资讯:查证→骨架→去 AI 味→发布
 version: 1.0.0
 description: |
   基于某条新闻或话题，为 Funcinating(范趣町)Shopify news 博客生成一篇「事实扎实、

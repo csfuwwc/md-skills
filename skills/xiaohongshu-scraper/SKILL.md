@@ -1,5 +1,7 @@
 ---
 name: xiaohongshu-scraper
+category: 内容抓取
+short-description: 小红书笔记抓正文/互动/元数据,回填飞书表
 description: Use when a user provides Xiaohongshu/XHS/xhslink URLs, asks to fetch 小红书 note or video content, likes, saves/collections, comments, publish metadata, or wants to fill a spreadsheet/Base from 小红书 links.
 ---
 

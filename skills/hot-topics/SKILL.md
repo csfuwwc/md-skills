@@ -1,5 +1,7 @@
 ---
 name: hot-topics
+category: 情报
+short-description: 拉微博热搜和 B 站热门榜,喂选题
 description: 拉各平台的实时热榜(微博热搜、B站热门视频),用于选题、蹭热点、看今天大家在聊什么。走公开接口,不需要登录、不碰账号。触发场景:今天有什么热点、微博热搜、B站热门、热榜、蹭热点选题、最近流行什么、有什么可以蹭的话题。
 ---
 
@@ -34,7 +36,7 @@ python3 scripts/hot.py --json             # 给机器读
 
 1. 拉热榜 → 人或模型挑出跟自家品类沾边的
 2. 拿到话题词后再去**深挖**:`xiaohongshu-scraper` / `douyin-scraper` 看这个词下面别人怎么写、
-   `bilibili-keywords-scraper` 找这个方向的 UP
+   `bilibili-creator-finder` 找这个方向的 UP
 3. 素材要存下来复用 → `oss-upload`
 
 **别直接把热搜词当选题**。热搜里大量是社会新闻、明星八卦,跟品牌调性硬蹭会翻车;
