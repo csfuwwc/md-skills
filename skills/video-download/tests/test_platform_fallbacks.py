@@ -17,6 +17,115 @@ SPEC.loader.exec_module(video_download)
 
 
 class PlatformFallbackTests(unittest.TestCase):
+    def test_douyin_playwright_success_returns_output_path(self):
+        with tempfile.TemporaryDirectory() as output_dir, mock.patch.object(
+            video_download,
+            "launch_browser_and_capture",
+            return_value=("https://cdn.example/douyin.mp4", "title"),
+        ), mock.patch.object(
+            video_download, "download_file", return_value=1024
+        ), mock.patch.dict(
+            os.environ, {"VIDEO_DOWNLOAD_OUTPUT_DIR": output_dir}, clear=False
+        ):
+            result = video_download.download_douyin(
+                "https://www.douyin.com/video/7625857786269715752",
+                "douyin.mp4",
+            )
+
+        self.assertEqual(result, os.path.join(output_dir, "douyin.mp4"))
+
+    def test_xiaohongshu_playwright_success_returns_output_path(self):
+        with tempfile.TemporaryDirectory() as output_dir, mock.patch.object(
+            video_download,
+            "launch_browser_and_capture",
+            return_value=("https://cdn.example/xiaohongshu.mp4", "title"),
+        ), mock.patch.object(
+            video_download, "download_file", return_value=1024
+        ), mock.patch.dict(
+            os.environ, {"VIDEO_DOWNLOAD_OUTPUT_DIR": output_dir}, clear=False
+        ):
+            result = video_download.download_xiaohongshu(
+                "https://www.xiaohongshu.com/explore/6411cf99000000001300b6d9",
+                "xiaohongshu.mp4",
+            )
+
+        self.assertEqual(result, os.path.join(output_dir, "xiaohongshu.mp4"))
+
+    def test_bilibili_playwright_durl_success_returns_output_path(self):
+        playinfo = json.dumps(
+            {
+                "playinfo": {
+                    "data": {"durl": [{"url": "https://cdn.example/bilibili.mp4"}]}
+                },
+                "title": "title",
+            }
+        )
+        with tempfile.TemporaryDirectory() as output_dir, mock.patch.object(
+            video_download,
+            "launch_browser_and_eval",
+            return_value=(playinfo, "title"),
+        ), mock.patch.object(
+            video_download, "download_file", return_value=1024
+        ), mock.patch.dict(
+            os.environ, {"VIDEO_DOWNLOAD_OUTPUT_DIR": output_dir}, clear=False
+        ):
+            result = video_download.download_bilibili_playwright(
+                "https://www.bilibili.com/video/BV1xx411c7mD",
+                "bilibili.mp4",
+            )
+
+        self.assertEqual(result, os.path.join(output_dir, "bilibili.mp4"))
+
+    def test_bilibili_playwright_dash_success_returns_output_path(self):
+        playinfo = json.dumps(
+            {
+                "playinfo": {
+                    "data": {
+                        "dash": {
+                            "video": [
+                                {
+                                    "bandwidth": 2,
+                                    "width": 1920,
+                                    "height": 1080,
+                                    "codecs": "avc1",
+                                    "baseUrl": "https://cdn.example/video.m4s",
+                                }
+                            ],
+                            "audio": [
+                                {
+                                    "bandwidth": 1,
+                                    "codecs": "mp4a",
+                                    "baseUrl": "https://cdn.example/audio.m4s",
+                                }
+                            ],
+                        }
+                    }
+                },
+                "title": "title",
+            }
+        )
+        with tempfile.TemporaryDirectory() as output_dir, mock.patch.object(
+            video_download,
+            "launch_browser_and_eval",
+            return_value=(playinfo, "title"),
+        ), mock.patch.object(
+            video_download, "download_file", return_value=1024
+        ), mock.patch.object(
+            video_download.subprocess,
+            "run",
+            return_value=SimpleNamespace(returncode=0, stderr=""),
+        ), mock.patch.object(
+            video_download.os.path, "getsize", return_value=1048576
+        ), mock.patch.dict(
+            os.environ, {"VIDEO_DOWNLOAD_OUTPUT_DIR": output_dir}, clear=False
+        ):
+            result = video_download.download_bilibili_playwright(
+                "https://www.bilibili.com/video/BV1xx411c7mD",
+                "bilibili.mp4",
+            )
+
+        self.assertEqual(result, os.path.join(output_dir, "bilibili.mp4"))
+
     def test_douyin_falls_back_to_ytdlp_with_platform_cookies(self):
         with mock.patch.object(
             video_download,

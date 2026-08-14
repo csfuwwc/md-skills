@@ -631,6 +631,7 @@ def download_douyin(url, output_name=None):
     output_path = os.path.join(output_dir(), output_name)
     size = download_file(cdn_url, output_path, 'https://www.douyin.com/')
     print(f"[4/4] 下载完成: {output_path} ({size / 1048576:.1f}MB)")
+    return output_path
 
 # ── 小红书下载 ────────────────────────────────────────────
 
@@ -675,6 +676,7 @@ def download_xiaohongshu(url, output_name=None):
     output_path = os.path.join(output_dir(), output_name)
     size = download_file(cdn_url, output_path, 'https://www.xiaohongshu.com/')
     print(f"[4/4] 下载完成: {output_path} ({size / 1048576:.1f}MB)")
+    return output_path
 
 # ── B站下载 ───────────────────────────────────────────────
 
@@ -725,7 +727,7 @@ def download_bilibili_playwright(url, output_name=None):
             size = download_file(video_url, output_path, 'https://www.bilibili.com/',
                                  {'Origin': 'https://www.bilibili.com'})
             print(f"[5/5] 下载完成: {output_path} ({size / 1048576:.1f}MB)")
-            return
+            return output_path
         print("错误: 无法解析视频流信息")
         sys.exit(1)
 
@@ -784,6 +786,7 @@ def download_bilibili_playwright(url, output_name=None):
 
     size = os.path.getsize(output_path) / 1048576
     print(f"下载完成: {output_path} ({size:.1f}MB)")
+    return output_path
 
 def download_bilibili(url, output_name=None):
     """优先使用 yt-dlp；失败时回退现有 Playwright 解析链路。"""
