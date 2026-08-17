@@ -52,6 +52,14 @@ shopify store execute -s qs0nxk-ft.myshopify.com -j -q '{
 ```
 拿 article GID：`{ blogs(first:5){nodes{handle articles(first:25){nodes{handle id}}}} }`，news 博客 handle=`news`。
 
+**自拟话题时先看竞品动态**(2026-08-17 接入):竞品新文清单每周一自动刷新,
+落在《竞品内容监测复盘(滚动)》的侦察流水和「竞品Blog-News亮眼内容拆解」表
+(base=`JYO8bk3doa9YF5sZ0mWcPMXwnCe` / table=`tblk9g87FdpmFx3X`)。
+对手发的**品类动态/榜单/行业观点**可以作为 news 选题线索(事实仍须按 ② 独立查证,**绝不转述对方结论**);
+对手发的**关键词长文**不归 news,走 funcinating-guides 的选题去重闸第 3 道。
+新话题若锁定了某个搜索词,同样先按 guides 那道闸把词入台账(状态=手动录入、决策留空)再动笔。
+现阶段人工执行;这一步是纯机械的读表比对,将来可整体自动化。
+
 ### ② 查证真实事实(固定信源，交叉验证)
 用 WebSearch + WebFetch 扫这些源，多个源对上才采信:
 - **官方一手**：Instagram `fun_cinating`、TikTok `@funcinating`、微博「范趣町FUNCINATING」。
