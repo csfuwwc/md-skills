@@ -1,4 +1,4 @@
 interface:
-  display_name: "自建微信公众号抓取"
-  short_description: "通过自建共享登录网关抓取公众号正文和最近文章列表"
-  default_prompt: "Use $wechat-scraper to fetch a WeChat article or list the account's recent posts through our private service."
+  display_name: "微信公众号抓取"
+  short_description: "静态优先，网关和浏览器兜底抓取公众号正文与历史文章"
+  default_prompt: "Use $wechat-scraper to fetch a public WeChat article through static, gateway, and browser fallbacks, or list recent posts."

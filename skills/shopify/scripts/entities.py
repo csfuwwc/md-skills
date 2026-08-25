@@ -1,16 +1,31 @@
 """实体定义:每个 Shopify 资源(product/collection/…)的 GraphQL 查询 + 字段映射。
    sync_pull/writeback 据此做实体感知处理。新增实体只在这里加一段。"""
+import re
 
 # ---------- PRODUCT ----------
 PRODUCT_QUERY = """query($cursor:String){ products(first:50, query:"%(q)s", after:$cursor){
   edges{ cursor node{
-    id handle onlineStoreUrl status vendor
+    id handle onlineStoreUrl status vendor productType tags category{ fullName }
     title descriptionHtml seo{ title description }
     featuredImage{ url }
-    variants(first:100){ edges{ node{ sku price inventoryQuantity } } }
+    variants(first:250){ edges{ node{ id title sku price inventoryQuantity inventoryPolicy } } }
     collections(first:30){ edges{ node{ handle } } }
     metafields(first:60){ edges{ node{ namespace key value } } }
   } } pageInfo{ hasNextPage endCursor } } }"""
+
+def normalize_materials(value):
+    if not value: return []
+    aliases={
+      "polyester":"Polyester", "polyester fibre":"Polyester", "polyester fiber":"Polyester",
+      "abs":"ABS", "pvc":"PVC", "magnet":"Magnet",
+    }
+    parts=[p.strip() for p in re.split(r"\s*(?:\+|,|/|\band\b)\s*",str(value),flags=re.I) if p.strip()]
+    normalized=[]
+    for part in parts:
+        item=aliases.get(part.lower(),part)
+        if item not in normalized: normalized.append(item)
+    return normalized
+
 
 def build_product(node, cfg):
     v=[e["node"] for e in node["variants"]["edges"]]
@@ -19,7 +34,8 @@ def build_product(node, cfg):
     cc=cfg.get("collections",{})
     mfv={f"{m['namespace']}.{m['key']}":m["value"] for m in [e["node"] for e in node["metafields"]["edges"]]}
     mirror={"Shopify Product ID":node["id"],"Handle短名URL":node["handle"],"商品URL":node.get("onlineStoreUrl") or "",
-      "状态":node["status"],"Vendor":node.get("vendor") or "","变体数":len(v),
+      "状态":node["status"],"Vendor":node.get("vendor") or "","Product Type":node.get("productType") or "",
+      "Shopify分类":(node.get("category") or {}).get("fullName") or "","变体数":len(v),
       "SKU汇总":", ".join(x["sku"] for x in v if x.get("sku")),
       "价格区间USD":(f"{min(prices):g}-{max(prices):g}" if prices else ""),
       "总库存":sum(int(x.get("inventoryQuantity") or 0) for x in v),
@@ -27,6 +43,7 @@ def build_product(node, cfg):
       "主图URL":(node.get("featuredImage") or {}).get("url","")}
     content={"商品名称":node.get("title") or "","商品描述EN":node.get("descriptionHtml") or "",
       "SEO Title EN":(node.get("seo") or {}).get("title") or "","SEO描述EN":(node.get("seo") or {}).get("description") or "",
+      "Tags|标签":node.get("tags") or [],
       "目标IP集合":[c for c in cols if c in cc.get("ip",[])],
       "目标品类集合":[c for c in cols if c in cc.get("category",[])],
       "目标场景集合":[c for c in cols if c in cc.get("scenario",[])]}
@@ -35,6 +52,7 @@ def build_product(node, cfg):
       "custom.series 系列":"custom.series","custom.scenario_copy 场景文案":"custom.scenario_copy",
       "custom.faq 常见问题":"custom.faq"}.items():
         content[col]=mfv.get(key,"")
+    content["custom.material 材质"]=normalize_materials(mfv.get("custom.material",""))
     return mirror, content
 
 # ---------- COLLECTION ----------
@@ -121,7 +139,7 @@ ENTITIES = {
 
 # ---------- 写回规格(sync_writeback 用)----------
 PRODUCT_WB = {
- "cur_query":"""query($id:ID!){ product(id:$id){ title descriptionHtml productType tags status seo{title description}
+ "cur_query":"""query($id:ID!){ product(id:$id){ title descriptionHtml productType tags status onlineStoreUrl seo{title description}
    variants(first:250){ nodes{ id title sku inventoryPolicy } pageInfo{ hasNextPage } }
    metafields(first:60){ edges{ node{ namespace key value } } } collections(first:30){edges{node{handle}}} } }""",
  "cur_key":"product",

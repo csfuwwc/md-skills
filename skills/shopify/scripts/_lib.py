@@ -21,15 +21,25 @@ def shopify(query, store, variables=None, allow_mutations=False):
     """跑一条 Admin GraphQL,返回 data(已去 ANSI/无 data 包裹兼容)。"""
     with tempfile.TemporaryDirectory() as t:
         qf = os.path.join(t, "q.graphql"); of = os.path.join(t, "o.json")
-        open(qf, "w").write(query)
+        with open(qf, "w", encoding="utf-8") as handle: handle.write(query)
         cmd = ["shopify","store","execute","-s",store,"-j","--query-file",qf,"--output-file",of]
         if allow_mutations: cmd.append("--allow-mutations")
         if variables:
-            vf = os.path.join(t, "v.json"); open(vf,"w").write(json.dumps(variables)); cmd += ["--variable-file", vf]
-        subprocess.run(cmd, capture_output=True, text=True)
+            vf = os.path.join(t, "v.json")
+            with open(vf,"w",encoding="utf-8") as handle: json.dump(variables,handle)
+            cmd += ["--variable-file", vf]
+        result=subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode:
+            detail=re.sub(r"\x1b\[[0-9;]*[A-Za-z]","",(result.stderr or result.stdout or "")).strip()[:1000]
+            raise RuntimeError("shopify execute 失败"+(f": {detail}" if detail else ""))
         if not os.path.exists(of): raise RuntimeError("shopify execute 无输出")
-        raw = json.load(open(of))
-        return raw.get("data", raw)
+        with open(of,encoding="utf-8") as handle: raw=json.load(handle)
+        if raw.get("errors"):
+            messages="; ".join(str(error.get("message") or error) for error in raw["errors"])
+            raise RuntimeError(f"Shopify GraphQL errors: {messages}")
+        data=raw.get("data",raw)
+        if data is None: raise RuntimeError("Shopify GraphQL 返回 data=null")
+        return data
 
 def feishu_profile(cfg):
     """profile 可留空:空=用 lark-cli 当前活动 profile(同事自己已登录的飞书),不必写进 config。"""
@@ -41,7 +51,14 @@ def _lark(args, profile=None):
     r = subprocess.run(cmd, capture_output=True, text=True)
     out = r.stdout + r.stderr
     i = out.find("{")
-    return json.loads(out[i:]) if i>=0 else {}
+    if r.returncode:
+        detail=out[i:] if i>=0 else out
+        raise RuntimeError(f"lark-cli 失败: {detail.strip()[:1000]}")
+    if i<0: raise RuntimeError("lark-cli 未返回 JSON")
+    data=json.loads(out[i:])
+    if data.get("ok") is False or (data.get("code") not in (None,0)):
+        raise RuntimeError(f"lark-cli API 失败: {data.get('error') or data.get('msg') or data}")
+    return data
 
 def lark_post(path, data_obj, profile=None):
     """POST body 走 @相对路径临时文件(lark-cli 要求 @file 在当前目录内)。"""
@@ -64,8 +81,16 @@ def lark_post(path, data_obj, profile=None):
 def bitable_list(cfg):
     """拉全部记录,返回 [{record_id, fields}]。"""
     app=cfg["feishu"]["app_token"]; tbl=cfg["feishu"]["table_id"]; prof=feishu_profile(cfg)
-    d=_lark(["api","GET",f"/bitable/v1/apps/{app}/tables/{tbl}/records","--params",'{"page_size":200}'], prof)
-    return (d.get("data") or {}).get("items") or []
+    rows=[]; page_token=None
+    while True:
+        params={"page_size":200}
+        if page_token: params["page_token"]=page_token
+        d=_lark(["api","GET",f"/bitable/v1/apps/{app}/tables/{tbl}/records","--params",json.dumps(params)], prof)
+        data=d.get("data") or {}
+        rows.extend(data.get("items") or [])
+        if not data.get("has_more"): return rows
+        page_token=data.get("page_token")
+        if not page_token: raise RuntimeError("飞书记录返回 has_more=true 但缺少 page_token")
 
 def bitable_field_names(cfg):
     app=cfg["feishu"]["app_token"]; tbl=cfg["feishu"]["table_id"]; prof=feishu_profile(cfg)
@@ -86,6 +111,6 @@ def ensure_ready(cfg):
 def cell_text(v):
     if v is None: return ""
     if isinstance(v,str): return v
-    if isinstance(v,list): return "".join((x.get("text",x.get("name","")) if isinstance(x,dict) else str(x)) for x in v)
+    if isinstance(v,list): return ", ".join((x.get("text",x.get("name","")) if isinstance(x,dict) else str(x)) for x in v)
     if isinstance(v,dict): return v.get("text") or v.get("name") or ""
     return str(v)

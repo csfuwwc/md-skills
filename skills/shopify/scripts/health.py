@@ -18,6 +18,55 @@ def line(ok, label, detail=""):
     print(f"  {'✅' if ok else '⚠️ '} {label}{('  '+detail) if detail else ''}")
     return 0 if ok else 1
 
+
+def workflow_field_issues(fields):
+    """检查飞书流程字段自洽性；不把 Shopify ACTIVE 误当成历史写回成功证据。"""
+    issues=[]
+    shopify_status=_lib.cell_text(fields.get("状态")).strip().upper()
+    workflow_status=_lib.cell_text(fields.get("内容审核状态")).strip()
+    writeback_status=_lib.cell_text(fields.get("Shopify写回状态")).strip()
+    writeback_time=fields.get("Shopify写回时间")
+    error=_lib.cell_text(fields.get("写回错误信息")).strip()
+    source=_lib.cell_text(fields.get("资料来源|官方依据")).strip()
+    faq=_lib.cell_text(fields.get("custom.faq 常见问题")).strip()
+    faq_status=_lib.cell_text(fields.get("FAQ JSON校验状态")).strip()
+    success=writeback_status in {"成功","已写回"}
+    published=shopify_status=="ACTIVE" or workflow_status=="已上线"
+
+    product_url=fields.get("商品URL")
+    if isinstance(product_url,dict): product_url=product_url.get("link") or product_url.get("text") or ""
+    if shopify_status=="ACTIVE" and not str(product_url or "").strip():
+        issues.append("ACTIVE 但商品URL为空")
+    if not source: issues.append("资料来源|官方依据为空")
+    if published and not faq: issues.append("已上线但 FAQ 为空")
+    if faq and faq_status!="通过": issues.append("FAQ 有内容但校验状态不是通过")
+    if published and not success: issues.append("已上线但没有经回读验证的写回成功状态")
+    if success and not writeback_time: issues.append("写回成功但写回时间为空")
+    if success and error: issues.append("写回成功但仍有错误信息")
+    if writeback_status=="失败" and not error: issues.append("写回失败但错误信息为空")
+    if not success and writeback_time: issues.append("非成功状态却有写回时间")
+    if writeback_status!="失败" and error: issues.append("非失败状态却有错误信息")
+    return issues
+
+
+def check_product_workflow(cfg):
+    """只读巡检商品表的来源、FAQ、URL与写回状态债务。"""
+    table_id=((cfg.get("entities") or {}).get("product") or {}).get("table_id","")
+    if not table_id:
+        print("\n[流程] 商品飞书表")
+        return line(False,"流程字段完整性","config.entities.product.table_id 未配置")
+    flow_cfg=dict(cfg); flow_cfg["feishu"]=dict(cfg.get("feishu") or {})
+    flow_cfg["feishu"]["table_id"]=table_id
+    rows=_lib.bitable_list(flow_cfg); bad=[]
+    for row in rows:
+        issues=workflow_field_issues(row.get("fields") or {})
+        if issues:
+            title=_lib.cell_text((row.get("fields") or {}).get("商品名称")) or row.get("record_id","(无名)")
+            bad.append((title,issues))
+    print(f"\n[流程] 商品飞书表 × {len(rows)}")
+    detail="" if not bad else f"异常 {len(bad)} 行，如 {bad[0][0][:24]}: {'; '.join(bad[0][1][:2])}"
+    return line(not bad,f"流程字段完整性 {len(rows)-len(bad)}/{len(rows)}",detail)
+
 def check_products(store):
     q='''{ products(first:100){ edges{ node{
       title status descriptionHtml seo{title description}
@@ -107,6 +156,7 @@ def main():
     total+=check_products(store)
     total+=check_collections(store)
     total+=check_redirects(store)
+    total+=check_product_workflow(cfg)
     if a.i18n: total+=check_i18n(cfg, a.pull)
     print("\n"+"─"*40)
     print(f"结论:{'✅ 全绿,无待办' if total==0 else f'⚠️  {total} 项待办,见上 ⚠️ 处'}")

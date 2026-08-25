@@ -26,7 +26,7 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | [douyin-scraper](skills/douyin-scraper/) | 抖音链接抓正文/互动/视觉内容,回填飞书表 |
 | [tikhub-query](skills/tikhub-query/) | 走公司内部计费网关查 TikTok 视频详情 |
 | [video-download](skills/video-download/) | 通用社媒视频下载(抖音/小红书/B站/TikTok/YouTube 等) |
-| [wechat-scraper](skills/wechat-scraper/) | 经自建网关抓公众号正文与历史文章列表 |
+| [wechat-scraper](skills/wechat-scraper/) | 静态解析优先、网关与浏览器回退抓公众号正文及历史文章 |
 | [weibo-scraper](skills/weibo-scraper/) | 微博链接抓正文/互动/视觉内容,回填飞书表 |
 | [xiaohongshu-scraper](skills/xiaohongshu-scraper/) | 小红书笔记抓正文/互动/元数据,回填飞书表 |
 
@@ -45,7 +45,7 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | Skill | 做什么 |
 |---|---|
 | [feishu-cli-manager](skills/feishu-cli-manager/) | lark-cli 的安装、配置与授权刷新维护 |
-| [imap-smtp-email](skills/imap-smtp-email/) | IMAP/SMTP 多账号收发信与附件处理 |
+| [imap-smtp-email](skills/imap-smtp-email/) | IMAP/SMTP 多账号收发信、附件处理与发送频率保护 |
 | [oss-upload](skills/oss-upload/) | 本地图片/视频/文件传阿里云 OSS,拿可公开引用的链接 |
 
 ### 内容生产
@@ -65,8 +65,8 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | Skill | 做什么 |
 |---|---|
 | [funcinating-guides](skills/funcinating-guides/) | 给范趣町 Shopify guides 写能带流量、能留人的长文指南 |
-| [funcinating-news](skills/funcinating-news/) | 给范趣町 Shopify news 写双语资讯:查证→骨架→去 AI 味→发布 |
-| [shopify](skills/shopify/) | 范趣町 Shopify 上架流水线:SEO/handle/metafield/集合/多语言/写回上架 |
+| [funcinating-news](skills/funcinating-news/) | 给范趣町 Shopify news 写双语资讯：查证、双语、SEO、轮播与发布验收 |
+| [shopify](skills/shopify/) | 范趣町 Shopify 上架流水线：内容、多语言、区域定价、履约与上线验收 |
 
 ### skill 自治
 

@@ -11,6 +11,123 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const config = require('./config');
+const SEND_STATE_FILE = path.join(os.homedir(), '.config', 'imap-smtp-email', 'send_state.json');
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function parseIntOpt(value, fallback) {
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function isGmailSmtp() {
+  return (config.smtp.host || '').toLowerCase().includes('gmail.com');
+}
+
+function splitRecipients(value) {
+  if (!value) return [];
+  return String(value).split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function getRecipientCount(options) {
+  return (
+    splitRecipients(options.to).length +
+    splitRecipients(options.cc).length +
+    splitRecipients(options.bcc).length
+  );
+}
+
+function loadSendState() {
+  try {
+    if (fs.existsSync(SEND_STATE_FILE)) {
+      return JSON.parse(fs.readFileSync(SEND_STATE_FILE, 'utf8'));
+    }
+  } catch (_) {}
+  return {};
+}
+
+function saveSendState(state) {
+  const dir = path.dirname(SEND_STATE_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  fs.writeFileSync(SEND_STATE_FILE, JSON.stringify(state, null, 2), { mode: 0o600 });
+}
+
+function accountKey() {
+  return `${config.smtp.host || 'smtp'}::${config.smtp.user || 'user'}`;
+}
+
+function getGuardrailConfig(options) {
+  const gmail = isGmailSmtp();
+  return {
+    minIntervalMs: parseIntOpt(options['min-interval-ms'], gmail ? 5000 : 1000),
+    maxPerHour: parseIntOpt(options['max-per-hour'], gmail ? 120 : 500),
+    maxPer24h: parseIntOpt(options['max-per-24h'], gmail ? 400 : 2000),
+    maxRecipientsPerMessage: parseIntOpt(options['max-recipients'], gmail ? 50 : 100),
+  };
+}
+
+function pruneHistory(arr, nowMs) {
+  if (!Array.isArray(arr)) return [];
+  const dayAgo = nowMs - 24 * 60 * 60 * 1000;
+  return arr.filter(ts => typeof ts === 'number' && ts >= dayAgo);
+}
+
+function checkAndPrepareSend(options) {
+  const nowMs = Date.now();
+  const cfg = getGuardrailConfig(options);
+  const recipients = getRecipientCount(options);
+  const state = loadSendState();
+  const key = accountKey();
+  const entry = state[key] || { sends: [], blockedUntil: 0, lastSendAt: 0 };
+  entry.sends = pruneHistory(entry.sends, nowMs);
+
+  if (entry.blockedUntil && nowMs < entry.blockedUntil) {
+    const mins = Math.ceil((entry.blockedUntil - nowMs) / 60000);
+    throw new Error(`Sending is temporarily blocked by safety guard for this account. Retry in about ${mins} minute(s).`);
+  }
+
+  if (recipients > cfg.maxRecipientsPerMessage) {
+    throw new Error(`Recipient count (${recipients}) exceeds safe limit (${cfg.maxRecipientsPerMessage}). Split into smaller batches.`);
+  }
+
+  const hourAgo = nowMs - 60 * 60 * 1000;
+  const sentLastHour = entry.sends.filter(ts => ts >= hourAgo).length;
+  if (sentLastHour >= cfg.maxPerHour) {
+    throw new Error(`Rate limit reached: ${sentLastHour} emails sent in last hour (limit ${cfg.maxPerHour}).`);
+  }
+
+  if (entry.sends.length >= cfg.maxPer24h) {
+    throw new Error(`Daily rolling limit reached: ${entry.sends.length} emails in last 24h (limit ${cfg.maxPer24h}).`);
+  }
+
+  const waitMs = Math.max(0, (entry.lastSendAt || 0) + cfg.minIntervalMs - nowMs);
+  return { state, key, entry, waitMs };
+}
+
+function markSendSuccess(state, key, entry) {
+  const nowMs = Date.now();
+  entry.lastSendAt = nowMs;
+  entry.sends = pruneHistory(entry.sends, nowMs);
+  entry.sends.push(nowMs);
+  entry.blockedUntil = 0;
+  state[key] = entry;
+  saveSendState(state);
+}
+
+function maybeMarkBlocked(state, key, entry, err) {
+  const msg = String(err && err.message ? err.message : err || '').toLowerCase();
+  const isSuspicious =
+    /daily user sending quota exceeded|rate limit|too many|temporar|suspicious|5\.7\.[01]|4\.7\.0|421|450|452|454/.test(msg);
+  if (!isSuspicious) return;
+
+  // Conservative: 24h for clear quota/suspension signals, otherwise 30m.
+  const longBlock = /quota exceeded|reached a limit|limit for sending email|24 hour/.test(msg);
+  entry.blockedUntil = Date.now() + (longBlock ? 24 * 60 * 60 * 1000 : 30 * 60 * 1000);
+  state[key] = entry;
+  saveSendState(state);
+}
 
 function validateReadPath(inputPath) {
   let realPath;
@@ -96,6 +213,11 @@ function createTransporter() {
 
 // Send email
 async function sendEmail(options) {
+  const guard = checkAndPrepareSend(options);
+  if (guard.waitMs > 0) {
+    await sleep(guard.waitMs);
+  }
+
   const transporter = createTransporter();
 
   // Verify connection
@@ -122,14 +244,19 @@ async function sendEmail(options) {
     mailOptions.text = options.body || '';
   }
 
-  const info = await transporter.sendMail(mailOptions);
-
-  return {
-    success: true,
-    messageId: info.messageId,
-    response: info.response,
-    to: mailOptions.to,
-  };
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    markSendSuccess(guard.state, guard.key, guard.entry);
+    return {
+      success: true,
+      messageId: info.messageId,
+      response: info.response,
+      to: mailOptions.to,
+    };
+  } catch (err) {
+    maybeMarkBlocked(guard.state, guard.key, guard.entry, err);
+    throw err;
+  }
 }
 
 // Read file content for attachments

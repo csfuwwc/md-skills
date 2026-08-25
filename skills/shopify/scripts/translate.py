@@ -9,6 +9,7 @@ import sys, os, json, argparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _lib
 from entities import ML_METAFIELDS, LANG_SUFFIX, RES_LIST
+from sync_writeback import description_html_issues
 
 RES_TYPE={"product":"PRODUCT","collection":"COLLECTION","article":"ARTICLE","page":"PAGE"}
 TR_KEYS={"product":{"title","body_html","meta_title","meta_description"},
@@ -16,7 +17,27 @@ TR_KEYS={"product":{"title","body_html","meta_title","meta_description"},
          "article":{"title","body_html","summary_html","meta_title","meta_description"},
          "page":{"title","body_html","meta_title","meta_description"}}
 
-def export(cfg, entity, lang, out):
+
+def resource_selected(resource_id, requested_resource_id):
+    return not requested_resource_id or resource_id == requested_resource_id
+
+
+def translation_import_issues(entity, data):
+    """在任何 translationsRegister 前验证商品描述图片结构。"""
+    if entity!="product": return []
+    issues=[]
+    for resource in data:
+        for content in resource.get("contents") or []:
+            if content.get("key")!="body_html" or not str(content.get("target") or "").strip():
+                continue
+            for issue in description_html_issues(
+                content.get("target") or "",
+                content.get("en") or "",
+            ):
+                issues.append(f"{resource.get('resourceId')} body_html: {issue}")
+    return issues
+
+def export(cfg, entity, lang, out, resource_id=None):
     store=cfg["shopify_store"]; keys=TR_KEYS[entity]; rt=RES_TYPE[entity]
     q='''query($cursor:String){ translatableResources(first:30, resourceType: %s, after:$cursor){
       edges{ node{ resourceId translatableContent{ key value digest locale } } }
@@ -25,18 +46,24 @@ def export(cfg, entity, lang, out):
     while True:
         d=_lib.shopify(q, store, {"cursor":cursor}); tr=d["translatableResources"]
         for e in tr["edges"]:
-            n=e["node"]; cs=[{"key":c["key"],"digest":c["digest"],"en":c["value"],"target":""}
+            n=e["node"]
+            if not resource_selected(n["resourceId"], resource_id): continue
+            cs=[{"key":c["key"],"digest":c["digest"],"en":c["value"],"target":""}
                 for c in n["translatableContent"] if c["key"] in keys and c.get("value")]
             if cs: data.append({"resourceId":n["resourceId"],"contents":cs})
         if tr["pageInfo"]["hasNextPage"]: cursor=tr["pageInfo"]["endCursor"]
         else: break
     json.dump(data, open(out,"w"), ensure_ascii=False, indent=1)
     n=sum(len(r["contents"]) for r in data)
+    if resource_id and not data: raise RuntimeError(f"未找到可翻译资源: {resource_id}")
     print(f"导出 {entity} {len(data)} 资源 / {n} 字段 → {out}")
     print(f"→ agent 翻译:每个 content 的 'target' 填 {lang} 译文(DNT不译/非美元去$/去AI味/HTML结构一致),再 --import")
 
 def imp(cfg, entity, lang, inp):
     store=cfg["shopify_store"]; data=json.load(open(inp)); ok=0; errs=[]
+    safety_issues=translation_import_issues(entity,data)
+    if safety_issues:
+        raise RuntimeError("翻译导入已阻断: "+"; ".join(safety_issues))
     for res in data:
         trans=[{"key":c["key"],"locale":lang,"value":c["target"],"translatableContentDigest":c["digest"]}
                for c in res["contents"] if c.get("target","").strip()]
@@ -48,7 +75,7 @@ def imp(cfg, entity, lang, inp):
     for e in errs[:5]: print("  ",e)
 
 
-def export_mf(cfg, entity, lang, out):
+def export_mf(cfg, entity, lang, out, resource_id=None):
     store=cfg["shopify_store"]; mfs=ML_METAFIELDS.get(entity,[])
     if not mfs: print(f"{entity} 无需 _<lang> metafield 变体"); return
     if entity not in RES_LIST: print(f"{entity} 暂不支持 metafield 变体"); return
@@ -58,6 +85,7 @@ def export_mf(cfg, entity, lang, out):
     d=_lib.shopify(q, store); rows=[]
     for e in d[RES_LIST[entity]]["edges"]:
         n=e["node"]
+        if not resource_selected(n["id"], resource_id): continue
         for i,(ns,k,ty) in enumerate(mfs):
             v=(n.get(f"m{i}") or {}).get("value")
             if v and str(v).strip():
@@ -106,13 +134,14 @@ def main():
     ap.add_argument("--export"); ap.add_argument("--import",dest="imp")
     ap.add_argument("--export-mf"); ap.add_argument("--import-mf",dest="impmf"); ap.add_argument("--metafields",action="store_true")
     ap.add_argument("--market-check",action="store_true",help="校验该语言是否已在 market 启用+发布")
+    ap.add_argument("--resource-id",help="仅导出指定 Shopify resource GID")
     ap.add_argument("--skill-dir",default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     a=ap.parse_args()
     cfg=_lib.load_config(a.skill_dir); _lib.ensure_ready(cfg)
     if a.market_check: sys.exit(0 if market_check(cfg,a.lang) else 1)
-    if a.export: export(cfg,a.entity,a.lang,a.export)
+    if a.export: export(cfg,a.entity,a.lang,a.export,a.resource_id)
     elif a.imp: imp(cfg,a.entity,a.lang,a.imp)
-    elif a.export_mf: export_mf(cfg,a.entity,a.lang,a.export_mf)
+    elif a.export_mf: export_mf(cfg,a.entity,a.lang,a.export_mf,a.resource_id)
     elif a.impmf: import_mf(cfg,a.lang,a.impmf)
     else: print("需 --export/-mf 或 --import/-mf FILE")
 if __name__=="__main__": main()

@@ -20,6 +20,8 @@
     "TARTI",
     "CALOR",
     "KOUCOMI",
+    "MOCO",
+    "MOCO BEAR",
     "CHUANGASIA"
   ],
   "feishu": {
@@ -28,12 +30,147 @@
     "table_id": "tbl1fMZwUXEygEnj",
     "profile": ""
   },
+  "pricing": {
+    "_comment": "区域价格流程配置。飞书矩阵是金额 SSOT；P01-P07 必须显式选择，不能按美元价猜档。US 行写基础 USD 价并让 US/Global 继承；其余现有本币目录写 FIXED。参考商品只做二次校验，绝不反向覆盖矩阵。",
+    "source": {
+      "base_token": "LMU8bQ9USa5J7TsIpQLcbjNdnAc",
+      "table_id": "tbl2Vmx2oLRfWqfB",
+      "view_id": "vewRHH06VU",
+      "tier_fields": {
+        "P01": "P01｜¥39档",
+        "P02": "P02｜¥69档",
+        "P03": "P03｜¥79档",
+        "P04": "P04｜¥129档",
+        "P05": "P05｜¥199档",
+        "P06": "P06｜¥399档",
+        "P07": "P07｜¥499档"
+      }
+    },
+    "market_catalogs": {
+      "US-USD": {
+        "catalog_id": "gid://shopify/MarketCatalog/94121885951",
+        "price_list_id": "gid://shopify/PriceList/24210833663",
+        "catalog_title": "美国",
+        "currency": "USD",
+        "mode": "BASE",
+        "price_source_key": "US-USD"
+      },
+      "GLOBAL-USD": {
+        "catalog_id": "gid://shopify/MarketCatalog/95187894527",
+        "price_list_id": "gid://shopify/PriceList/24216273151",
+        "catalog_title": "global",
+        "currency": "USD",
+        "mode": "BASE",
+        "price_source_key": "US-USD"
+      },
+      "GB-GBP": {
+        "catalog_id": "gid://shopify/MarketCatalog/90234585343",
+        "price_list_id": "gid://shopify/PriceList/24197005567",
+        "catalog_title": "英国",
+        "currency": "GBP",
+        "mode": "FIXED",
+        "price_source_key": "GB-GBP"
+      },
+      "EU-EUR": {
+        "catalog_id": "gid://shopify/MarketCatalog/95187927295",
+        "price_list_id": "gid://shopify/PriceList/24216305919",
+        "catalog_title": "欧盟",
+        "currency": "EUR",
+        "mode": "FIXED",
+        "price_source_key": "EU-EUR"
+      },
+      "TH-THB": {
+        "catalog_id": "gid://shopify/MarketCatalog/94121853183",
+        "price_list_id": "gid://shopify/PriceList/24210800895",
+        "catalog_title": "泰国",
+        "currency": "THB",
+        "mode": "FIXED",
+        "price_source_key": "TH-THB"
+      },
+      "SG-SGD": {
+        "catalog_id": "gid://shopify/MarketCatalog/95187599615",
+        "price_list_id": "gid://shopify/PriceList/24216207615",
+        "catalog_title": "新加坡",
+        "currency": "SGD",
+        "mode": "FIXED",
+        "price_source_key": "SG-SGD"
+      },
+      "MY-MYR": {
+        "catalog_id": "gid://shopify/MarketCatalog/95082184959",
+        "price_list_id": "gid://shopify/PriceList/24214962431",
+        "catalog_title": "马来西亚",
+        "currency": "MYR",
+        "mode": "FIXED",
+        "price_source_key": "MY-MYR"
+      },
+      "VN-VND": {
+        "catalog_id": "gid://shopify/MarketCatalog/95187566847",
+        "price_list_id": "gid://shopify/PriceList/24216174847",
+        "catalog_title": "越南",
+        "currency": "VND",
+        "mode": "FIXED",
+        "price_source_key": "VN-VND"
+      },
+      "PH-PHP": {
+        "catalog_id": "gid://shopify/MarketCatalog/95186944255",
+        "price_list_id": "gid://shopify/PriceList/24216142079",
+        "catalog_title": "菲律宾",
+        "currency": "PHP",
+        "mode": "FIXED",
+        "price_source_key": "PH-PHP"
+      },
+      "ID-IDR": {
+        "catalog_id": "gid://shopify/MarketCatalog/95187763455",
+        "price_list_id": "gid://shopify/PriceList/24216240383",
+        "catalog_title": "印度尼西亚",
+        "currency": "IDR",
+        "mode": "FIXED",
+        "price_source_key": "ID-IDR"
+      },
+      "MX-MXN": {
+        "catalog_id": "gid://shopify/MarketCatalog/95188254975",
+        "price_list_id": "gid://shopify/PriceList/24216338687",
+        "catalog_title": "墨西哥",
+        "currency": "MXN",
+        "mode": "FIXED",
+        "price_source_key": "MX-MXN"
+      }
+    },
+    "unsupported_market_keys": [
+      "CN-CNY",
+      "BR-BRL"
+    ],
+    "reference_products": {
+      "P02": "gid://shopify/Product/9507043180799"
+    }
+  },
+  "sellability": {
+    "_comment": "上架门禁：所有商品变体必须关联到范趣町配送；目标国家须有启用运费方式的线上履约仓；DENY 变体须在对应仓有正库存；激活后还要读取区域商品 JSON 验证 available=true。后台全绿但前台仍 false 时禁止自动切 CONTINUE 或改库存，须用户确认后再用 CAS 库存事件触发重算。",
+    "delivery_profile_id": "gid://shopify/DeliveryProfile/113552818431",
+    "delivery_profile_name": "范趣町配送",
+    "required_country_codes": [
+      "AT", "AU", "BE", "BG", "CA", "CY", "CZ", "DE", "DK", "EE",
+      "ES", "FI", "FR", "GB", "GR", "HK", "HR", "HU", "ID", "IE",
+      "IT", "JP", "KR", "LT", "LU", "LV", "MO", "MT", "MX", "MY",
+      "NL", "NZ", "PH", "PL", "PT", "RO", "SE", "SG", "SI", "SK",
+      "TH", "TW", "US", "VN"
+    ],
+    "storefront_checks": [
+      {
+        "country_code": "SG",
+        "path_prefix": "en-sg"
+      }
+    ],
+    "retry_attempts": 3,
+    "retry_delay_seconds": 3
+  },
   "collections": {
     "ip": [
       "gismow",
       "tarti",
       "calor",
-      "koucomi"
+      "koucomi",
+      "moco"
     ],
     "category": [
       "blind-box",
