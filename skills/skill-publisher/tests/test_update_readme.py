@@ -1,5 +1,7 @@
 import importlib.util
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -74,6 +76,67 @@ class UpdateReadmeTests(unittest.TestCase):
             )
 
             self.assertFalse(update_readme.update_readme(root))
+
+    def test_cli_refreshes_selected_existing_skill_description(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "skills" / "selected").mkdir(parents=True)
+            (root / "skills" / "untouched").mkdir(parents=True)
+            (root / "skills" / "selected" / "SKILL.md").write_text(
+                "---\nname: selected\ndescription: 复刻只有查看权限的飞书多维表格到自己的飞书。\n---\n",
+                encoding="utf-8",
+            )
+            (root / "skills" / "untouched" / "SKILL.md").write_text(
+                "---\nname: untouched\ndescription: 新的来源描述\n---\n",
+                encoding="utf-8",
+            )
+            readme = root / "README.md"
+            readme.write_text(
+                "## Skills\n\n"
+                "| Skill | 描述 |\n"
+                "|-------|------|\n"
+                "| [selected](skills/selected/) | Old English description |\n"
+                "| [untouched](skills/untouched/) | 保留人工描述 |\n\n"
+                "## 安装\n",
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), str(root), "--refresh-skill", "selected", "--min-cjk-ratio", "0.25"],
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            content = readme.read_text(encoding="utf-8")
+            self.assertIn("| [selected](skills/selected/) | 复刻只有查看权限的飞书多维表格到自己的飞书。 |", content)
+            self.assertIn("| [untouched](skills/untouched/) | 保留人工描述 |", content)
+
+    def test_cli_rejects_english_dominant_selected_description(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "skills" / "selected").mkdir(parents=True)
+            (root / "skills" / "selected" / "SKILL.md").write_text(
+                "---\nname: selected\ndescription: Replicate a Feishu Base with 完全复刻 support and attachment recovery.\n---\n",
+                encoding="utf-8",
+            )
+            (root / "README.md").write_text(
+                "## Skills\n\n"
+                "| Skill | 描述 |\n"
+                "|-------|------|\n"
+                "| [selected](skills/selected/) | Old description |\n\n"
+                "## 安装\n",
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), str(root), "--refresh-skill", "selected", "--min-cjk-ratio", "0.25"],
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Chinese-dominant", result.stderr)
 
 
 if __name__ == "__main__":

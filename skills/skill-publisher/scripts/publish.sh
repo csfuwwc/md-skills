@@ -124,7 +124,14 @@ if [[ "$PRUNE" -eq 1 ]]; then
 fi
 
 cd "$repo_root"
-python3 "$SCRIPT_DIR/update_readme.py" "$repo_root"
+README_ARGS=("$repo_root")
+for s in "${PUBLISH[@]}"; do
+  README_ARGS+=(--refresh-skill "$s")
+done
+if [[ "$TARGET_REPO" == "csfuwwc/md-skills" ]]; then
+  README_ARGS+=(--min-cjk-ratio 0.25)
+fi
+python3 "$SCRIPT_DIR/update_readme.py" "${README_ARGS[@]}"
 
 git add skills README.md
 if git diff --cached --quiet; then

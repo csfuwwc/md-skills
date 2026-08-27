@@ -24,9 +24,9 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | [funcinating-guides](skills/funcinating-guides/) | 给范趣町 Shopify guides 写能带流量、能留人的长文指南 |
 | [funcinating-news](skills/funcinating-news/) | 给范趣町 Shopify news 写双语资讯：查证、双语、SEO、轮播与发布验收 |
 | [shopify](skills/shopify/) | 范趣町 Shopify 上架流水线：内容、多语言、区域定价、履约与上线验收 |
-| [skill-publisher](skills/skill-publisher/) | 把本机选定的 skill 发布同步到 GitHub 仓库 |
+| [skill-publisher](skills/skill-publisher/) | 将 ~/.agents/skills 中选定的 skill 直接发布到 GitHub 仓库，依次完成临时克隆、同步、提交、推送和自动清理。适用于“发布新 skill”、“同步更新 skill”、“按标记批量发布 skill”。支持 dry-run、按名称发布、按 .publish 标记发布、可选 prune。 |
 | [skill-vetter](skills/skill-vetter/) | 第三方 skill 安装前的安全审查与风险分级 |
-| [lark-base-replica](skills/lark-base-replica/) | Replicate or migrate a Feishu/Lark Base that the current user can legitimately view into a user-owned Base, including tables, fields, views, supported ordinary records, and visible attachments. Use for 完全复刻、复制、迁移、备份或重建外部多维表格 when direct copy or export is unavailable or incomplete. Keep the source read-only and require exact target authorization before writes. |
+| [lark-base-replica](skills/lark-base-replica/) | 复刻或迁移当前用户可合法查看但无法直接复制的飞书多维表格到自己的 Base，包含表、字段、视图、支持的普通记录和可见附件。适用于完全复刻、复制、迁移、备份或重建外部多维表格；源表保持只读，写入前必须确认精确目标 Base。 |
 
 ## 安装
 

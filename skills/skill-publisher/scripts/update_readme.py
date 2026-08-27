@@ -6,11 +6,14 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import re
+import sys
 
 
 ROW_RE = re.compile(
     r"^\| \[([a-z0-9-]+)\]\(skills/\1/\) \| (.*) \|$"
 )
+CJK_RE = re.compile(r"[\u3400-\u9fff]")
+LATIN_RE = re.compile(r"[A-Za-z]")
 
 
 def skill_description(skill_dir: Path) -> str:
@@ -33,7 +36,18 @@ def skill_description(skill_dir: Path) -> str:
     return match.group(1).strip().strip('"\'') if match else skill_dir.name
 
 
-def update_readme(repo_root: Path) -> bool:
+def cjk_ratio(value: str) -> float:
+    cjk = len(CJK_RE.findall(value))
+    latin = len(LATIN_RE.findall(value))
+    return cjk / (cjk + latin) if cjk + latin else 0.0
+
+
+def update_readme(
+    repo_root: Path,
+    refresh_skills: set[str] | None = None,
+    min_cjk_ratio: float = 0.0,
+) -> bool:
+    refresh_skills = refresh_skills or set()
     readme = repo_root / "README.md"
     skills_root = repo_root / "skills"
     if not readme.exists() or not skills_root.is_dir():
@@ -65,10 +79,21 @@ def update_readme(repo_root: Path) -> bool:
 
     missing = sorted(set(skill_dirs) - set(existing_order))
     ordered_names = existing_order + missing
+    unknown_refresh = refresh_skills - set(skill_dirs)
+    if unknown_refresh:
+        raise ValueError(f"unknown refresh skills: {sorted(unknown_refresh)}")
     rows = []
     for name in ordered_names:
-        description = existing_descriptions.get(name) or skill_description(skill_dirs[name])
+        if name in refresh_skills or name not in existing_descriptions:
+            description = skill_description(skill_dirs[name])
+        else:
+            description = existing_descriptions[name]
         description = " ".join(description.split()).replace("|", "\\|")
+        if name in refresh_skills and cjk_ratio(description) < min_cjk_ratio:
+            raise ValueError(
+                f"{name}: README description must be Chinese-dominant "
+                f"(CJK ratio >= {min_cjk_ratio:.2f})"
+            )
         rows.append(f"| [{name}](skills/{name}/) | {description} |")
 
     section = [
@@ -100,8 +125,20 @@ def update_readme(repo_root: Path) -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repo_root", type=Path)
+    parser.add_argument("--refresh-skill", action="append", default=[])
+    parser.add_argument("--min-cjk-ratio", type=float, default=0.0)
     args = parser.parse_args()
-    changed = update_readme(args.repo_root)
+    if not 0.0 <= args.min_cjk_ratio <= 1.0:
+        parser.error("--min-cjk-ratio must be between 0 and 1")
+    try:
+        changed = update_readme(
+            args.repo_root,
+            refresh_skills=set(args.refresh_skill),
+            min_cjk_ratio=args.min_cjk_ratio,
+        )
+    except ValueError as error:
+        print(f"update_readme: {error}", file=sys.stderr)
+        return 2
     print("README updated" if changed else "README already current")
     return 0
 

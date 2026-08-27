@@ -1,6 +1,6 @@
 ---
 name: lark-base-replica
-description: Replicate or migrate a Feishu/Lark Base that the current user can legitimately view into a user-owned Base, including tables, fields, views, supported ordinary records, and visible attachments. Use for 完全复刻、复制、迁移、备份或重建外部多维表格 when direct copy or export is unavailable or incomplete. Keep the source read-only and require exact target authorization before writes.
+description: 复刻或迁移当前用户可合法查看但无法直接复制的飞书多维表格到自己的 Base，包含表、字段、视图、支持的普通记录和可见附件。适用于完全复刻、复制、迁移、备份或重建外部多维表格；源表保持只读，写入前必须确认精确目标 Base。
 metadata:
   version: 1.0.1
 ---

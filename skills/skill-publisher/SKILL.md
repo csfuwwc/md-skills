@@ -1,7 +1,5 @@
 ---
 name: skill-publisher
-category: skill 自治
-short-description: 把本机选定的 skill 发布同步到 GitHub 仓库
 description: 将 ~/.agents/skills 中选定的 skill 直接发布到 GitHub 仓库，依次完成临时克隆、同步、提交、推送和自动清理。适用于“发布新 skill”、“同步更新 skill”、“按标记批量发布 skill”。支持 dry-run、按名称发布、按 .publish 标记发布、可选 prune。
 ---
 
@@ -51,6 +49,8 @@ bash ./scripts/publish.sh --marked --message "chore(skills): publish updates"
 - 默认会自动提交并推送（若有变更）。
 - 默认仅同步选中的 skill，不影响其他 skill。
 - 发布后自动更新 README 的 Skills 表格和 `npx skills` 可选名称列表。
+- README 描述以本次发布 Skill 的 `agents/openai.yaml` `short_description` 或 `SKILL.md` frontmatter `description` 为来源；只刷新本次选中的 Skill，保留其他条目的人工描述。
+- 发布到默认仓库 `csfuwwc/md-skills` 时，本次发布描述的中文字符占中文与拉丁字符总数不得低于 25%；不符合时在 commit/push 前阻断。
 - 新增 skill 目录会先加入暂存区再判断差异，避免未跟踪文件被误判为“无变化”。
 - 需要清理目标仓库中未选 skill 时，追加 `--prune`。
 - commit 只在有变更时执行。
