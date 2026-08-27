@@ -11,7 +11,7 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | [douyin-scraper](skills/douyin-scraper/) | 抖音链接抓正文/互动/视觉内容,回填飞书表 |
 | [tikhub-query](skills/tikhub-query/) | 走公司内部计费网关查 TikTok 视频详情 |
 | [video-download](skills/video-download/) | 通用社媒视频下载(抖音/小红书/B站/TikTok/YouTube 等) |
-| [wechat-scraper](skills/wechat-scraper/) | 静态解析优先、网关与浏览器回退抓公众号正文及历史文章 |
+| [wechat-scraper](skills/wechat-scraper/) | 静态优先，网关和浏览器兜底抓取公众号正文与历史文章 |
 | [weibo-scraper](skills/weibo-scraper/) | 微博链接抓正文/互动/视觉内容,回填飞书表 |
 | [xiaohongshu-scraper](skills/xiaohongshu-scraper/) | 小红书笔记抓正文/互动/元数据,回填飞书表 |
 | [bilibili-creator-finder](skills/bilibili-creator-finder/) | 按关键词搜 B 站候选 UP 并回填飞书候选池(不发私信、不管跟进) |

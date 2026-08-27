@@ -1,7 +1,5 @@
 ---
 name: wechat-scraper
-category: 内容抓取
-short-description: 静态解析优先、网关与浏览器回退抓公众号正文及历史文章
 description: Fetch and archive one public WeChat official-account article with direct static HTML parsing, private-gateway fallback, and final browser rendering, or list the latest articles through the same gateway. Trigger for 微信公众号文章抓取、公众号内容提取、公众号作者识别、最近文章链接、历史文章列表、微信文章 HTML/Markdown/纯文本和离线归档 requests.
 ---
 
@@ -12,6 +10,7 @@ For one public article, use this fixed order: bundled static parser, self-hosted
 The VPS network layer restricts callers by IP. Do not request, read, store, or send an API key, `auth-key`, Cookie, UUID, QR session, or other login credential. The gateway owns the shared official-account login.
 
 Read [references/api.md](references/api.md) when using the gateway or interpreting its responses.
+Read [references/rebuild.md](references/rebuild.md) only when the user asks how the gateway works, needs to rebuild or recover it, or explicitly authorizes service-side diagnosis after a gateway failure. Treat the documented hosts and versions as replaceable baselines, re-check repositories before rebuilding, and never infer permission to access or change the VPS.
 
 ## Fetch one public article
 
