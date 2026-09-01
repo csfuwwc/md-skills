@@ -149,9 +149,33 @@ mutation { articleCreate(article: { blogId: "...", title: "...", handle: "...",
 → owner 确认后才 articleUpdate 置 isPublished: true,然后才做四语言与台账回填。
 未确认前公开 URL 404、搜索引擎不可见。
 
+**SEO 标题与描述必须单独写(2026-08-17 补,此前整条流程漏了这一步)**:
+Article 类型上**没有 `seo` 字段**(查了会报 `Field 'seo' doesn't exist on type 'Article'`),
+SERP 上那两行走两个 metafield。`title` 是 H1、`summary` 是博客列表页摘要,**都不是 SERP 标题/描述**。
+
+```graphql
+mutation { metafieldsSet(metafields:[
+  {ownerId:"gid://shopify/Article/{id}", namespace:"global", key:"title_tag",
+   type:"single_line_text_field", value:"<SERP 标题,≤60 字符>"},
+  {ownerId:"gid://shopify/Article/{id}", namespace:"global", key:"description_tag",
+   type:"single_line_text_field", value:"<SERP 描述,≤155 字符>"}
+]) { metafields{key value} userErrors{field message} } }
+```
+`shopify store execute` 默认禁写,**改数据要加 `--allow-mutations`**。
+
+**H1 和 SERP 标题的分工**(2026-08-17 的教训,别再犯):
+H1 可以有文学性、可以埋 IP 名;**SERP 标题必须直答主词的搜索意图**,句式跟着主词走
+(问句词就用问句、`best/trend` 词就带年份和品类)。
+反面教材:bag-charm-trend-2026 的 H1 是「Bag Charm Trend 2026: What Comes After Labubu」,
+SEO 标题为空 → Google 拿 H1 当结果标题。而它最大的词是 `are bag charms still in 2026`
+(问句)。结果:平均位次 6.7(该位置正常 CTR 3-6%),实际 CTR **0.5%**,
+周 1765 曝光只换来 8 个点击。**排名到手了,点击丢在标题上。**
+更讽刺的是它的 description_tag 第一句就是 "Are bag charms still in for 2026?"
+——当初写的人清楚意图,只是没把它写进标题。
+
 坑(与 funcinating-news 共享):
 - handle 全小写连字符英文,带年份的热词题建议 handle 也带年份(labubu-alternatives-2026);
-- title ≤60 字符,把热词放最前;summary 即 meta description,写卖点不写摘要腔;
+- title(H1)≤60 字符,把热词放最前;**summary 是列表页摘要,不是 meta description,别混**;
 - **四语言翻译**(th/es/zh-CN/zh-TW):`translatableResource` 取 body_html digest →
   各语言 `translationsRegister`(key: title/body_html/summary_html,digest 用**当前源文的**,
   源文再改则翻译须重注册)。译文里 FAQ 结构同样必须 h3+p。
@@ -178,9 +202,17 @@ mutation { articleCreate(article: { blogId: "...", title: "...", handle: "...",
    做法:只在正文已经提到那个东西的地方包 `<a>`,读起来自然;硬塞不相干的集合是负分。
    品牌合集(gismow/tarti/calor/koucomi/moco)和场景合集(gifts-under-30/desk-companions/
    bag-charms/vinyl-figures/plush/blind-box)都算,优先链本文真正在讲的那个。
-4. 四语言注册成功且 userErrors 为空,IP 名未被翻译;
-5. 发布后:GSC 对文章 URL 请求编入索引;
-6. 一周后回看 GA4(pagePath 含 /blogs/guides/):浏览量、人均停留——停留 <15s 说明首屏没钩住,回炉。
+4. **SEO 标题与描述非空**(机器查,零容忍——2026-08-17 全站体检:guides 18 篇里 14 篇缺标题、
+   11 篇缺描述,news 5 篇全缺,根因就是本清单此前没这一条):
+   ```
+   { blogs(first:5){ nodes{ handle articles(first:60){ nodes{ handle
+       tt:metafield(namespace:"global",key:"title_tag"){value}
+       dd:metafield(namespace:"global",key:"description_tag"){value} } } } } }
+   ```
+   两个都必须有值;标题 ≤60 字符且**句式对得上主词的搜索意图**(问句词配问句);描述 ≤155 字符。
+5. 四语言注册成功且 userErrors 为空,IP 名未被翻译;
+6. 发布后:GSC 对文章 URL 请求编入索引;
+7. 一周后回看 GA4(pagePath 含 /blogs/guides/):浏览量、人均停留——停留 <15s 说明首屏没钩住,回炉。
 
 ## 组合与相关
 
