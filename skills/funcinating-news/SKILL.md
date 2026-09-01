@@ -130,6 +130,12 @@ mutation($rid:ID!,$translations:[TranslationInput!]!){
 - 回读 `isPublished` 与 `publishedAt`，把 `publishedAt` 转回 GMT+8 后与用户确认的文章可见时间逐项比对到分钟。当前/过去时间应为公开状态；未来时间应保持排期状态。任何不一致都不得声称已发布或已排期。
 - grep 确认删掉的假信息 **0 残留**(标题/正文/摘要/图 alt/meta 都查)。
 - 回读 EN 与 zh-CN 的 `summary_html`、`meta_title`、`meta_description` 和 Tags；检查长度、列表实际展示的品牌/IP Tag、HTML 实体和页面 `<title>` / `<meta name="description">`。不得出现字面量 `&quot;`、`&#39;` 或从正文自动截出的超长描述。
+- **SERP 标题与描述非空(机器查,零容忍)**:`global.title_tag` 与 `global.description_tag` 两个 metafield 都必须有值——空着 Google 就拿 H1 和正文猜(2026-09-01 全站扫描:guides 8 篇缺项,含停留最佳文两项全空;8-17 只体检了 news 导致漏网)。查法:
+  ```
+  { blogs(first:5){ nodes{ handle articles(first:60){ nodes{ handle
+      tt:metafield(namespace:"global",key:"title_tag"){value}
+      dd:metafield(namespace:"global",key:"description_tag"){value} } } } } }
+  ```
 - 字数 200-500、**无 em-dash**、EN 和 zh-sg 两个 locale 都对、内链有效。
 - 多图稿还要按 [多图轮播规范](references/multi-image-gallery.md) 回读图片数量与顺序，并在真实页面验证悬停箭头、移动端滑动和首尾无缝循环。
 
