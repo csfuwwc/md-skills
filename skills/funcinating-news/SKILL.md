@@ -50,7 +50,7 @@ metadata:
 ### ① 取现状
 若是改已有文章，先拉它的现有内容 + 已有翻译 + 发布状态 + 来源，搞清缺什么、哪句可疑:
 ```
-shopify store execute -s qs0nxk-ft.myshopify.com -j -q '{
+node /home/ubuntu/fe-www.funcinating.com-next/scripts/shopify/gql.mjs -q '{
   article(id:"<ARTICLE_GID>"){ isPublished publishedAt author{name}
     su:metafield(namespace:"custom",key:"source_url"){value}
     sn:metafield(namespace:"custom",key:"source_name"){value} }
@@ -136,7 +136,7 @@ mutation($rid:ID!,$translations:[TranslationInput!]!){
 ---
 
 ## 环境备忘(会变的现查，别写死)
-- store：`qs0nxk-ft.myshopify.com`；`shopify store execute` 输出有进度行+ANSI，从 `raw.find('{')` 解析、先 `sed 's/\x1b\[[0-9;]*[a-zA-Z]//g'`。
+- store：`qs0nxk-ft.myshopify.com`；`gql.mjs` 输出纯 JSON(无进度行无 ANSI),直接 `json.loads`。
 - news 博客 handle=`news`；ZH locale=`zh-CN`(对应 zh-sg storefront)。
 - LIVE_THEME_ID / 各 article GID：现查(`blogs`/`themes`)，不同环境不同。
 - 主题层 news 详情已是「左图右文」版式，正文放长内容没问题。

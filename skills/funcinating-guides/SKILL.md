@@ -161,7 +161,7 @@ mutation { metafieldsSet(metafields:[
    type:"single_line_text_field", value:"<SERP 描述,≤155 字符>"}
 ]) { metafields{key value} userErrors{field message} } }
 ```
-`shopify store execute` 默认禁写,**改数据要加 `--allow-mutations`**。
+Shopify 读写一律走 gql.mjs(应用凭证通道 D-011;默认禁写,**改数据要加 `--allow-mutations`**;绝不跑 `shopify store auth`)。
 
 **H1 和 SERP 标题的分工**(2026-08-17 的教训,别再犯):
 H1 可以有文学性、可以埋 IP 名;**SERP 标题必须直答主词的搜索意图**,句式跟着主词走

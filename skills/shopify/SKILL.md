@@ -27,7 +27,7 @@ license: MIT
 
 ## 前提(跑之前)
 1. **config(必做)**:`cp config.example.json config.local.json`,在 `config.local.json` 填你的 Feishu 表 `app_token`/`table_id`(从表 URL 取;★这项不进公开仓库、只在本地;换设备各自建一份★)。运行时合并 example + local。
-2. **授权**:Shopify 走 `shopify store execute`(自带鉴权);Feishu 走 `lark-cli`——**默认用你当前活动 profile(你 agent 早已登录自己的飞书,`config.feishu.profile` 留空即可,不必再写);** 只有要指定别的飞书身份时才填 profile。**任何 token 都别写进文件。** 前提:你的飞书账号得有那几张多维表格的读写权限。
+2. **授权**:Shopify 走 `node /home/ubuntu/fe-www.funcinating.com-next/scripts/shopify/gql.mjs`(应用凭证通道 D-011;mutation 加 --allow-mutations,绝不跑 shopify store auth);Feishu 走 `lark-cli`——**默认用你当前活动 profile(你 agent 早已登录自己的飞书,`config.feishu.profile` 留空即可,不必再写);** 只有要指定别的飞书身份时才填 profile。**任何 token 都别写进文件。** 前提:你的飞书账号得有那几张多维表格的读写权限。
 3. **依赖**:`shopify` CLI、`lark-cli`、`python3`;多语言深挖见飞书《多语言适配指南(复用手册)》。
 
 ## 实体(entity)—— 一套脚本,三个资源
