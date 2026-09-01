@@ -176,9 +176,14 @@ SEO 标题为空 → Google 拿 H1 当结果标题。而它最大的词是 `are 
 坑(与 funcinating-news 共享):
 - handle 全小写连字符英文,带年份的热词题建议 handle 也带年份(labubu-alternatives-2026);
 - title(H1)≤60 字符,把热词放最前;**summary 是列表页摘要,不是 meta description,别混**;
-- **四语言翻译**(th/es/zh-CN/zh-TW):`translatableResource` 取 body_html digest →
-  各语言 `translationsRegister`(key: title/body_html/summary_html,digest 用**当前源文的**,
-  源文再改则翻译须重注册)。译文里 FAQ 结构同样必须 h3+p。
+- **四语言翻译**(th/es/zh-CN/zh-TW):`translatableResource` 取各 key 的 digest →
+  各语言 `translationsRegister`(key: title/body_html/summary_html **以及 meta_title/meta_description**,
+  digest 用**当前源文的**,源文再改则翻译须重注册)。译文里 FAQ 结构同样必须 h3+p。
+  ★meta 两键必须在写完 SEO metafields 之后注册(先写 EN 的 title_tag/description_tag,
+  再重查 translatableContent 拿它们的 digest)——漏了它,小语种页面的 SERP 标题/描述回退英文
+  (2026-09-01 审计:13 篇已发布 guides 里 12 篇缺,已批量补齐)。
+  `translationsRegister` 是 **per-key upsert**,分次注册不会清掉已有翻译键(2026-09-01 实证);
+  但流程仍按「先读现有翻译、只注册缺失/过期的键」写,幂等。
 
 ## 验收(全过才算完)
 
@@ -211,8 +216,20 @@ SEO 标题为空 → Google 拿 H1 当结果标题。而它最大的词是 `are 
    ```
    两个都必须有值;标题 ≤60 字符且**句式对得上主词的搜索意图**(问句词配问句);描述 ≤155 字符。
 5. 四语言注册成功且 userErrors 为空,IP 名未被翻译;
-6. 发布后:GSC 对文章 URL 请求编入索引;
-7. 一周后回看 GA4(pagePath 含 /blogs/guides/):浏览量、人均停留——停留 <15s 说明首屏没钩住,回炉。
+6. **发布状态回读**:回读 `isPublished` 与 `publishedAt`,与约定的可见时间核对(比较用 ISO 原值,
+   给 owner 展示时转 GMT+8)。当前/过去时间应为公开;**未来时间应保持排期状态,别误判成失败**。
+   任何不一致都不得声称已发布/已排期。
+7. **作者名回读**:`article.author.name` 归一化(trim+NFKC)后必须等于 `Funcinating Team`,
+   不一致即验收失败(写入模板里带了 author,但漏写时会静默变成操作者名字,必须回读兜底)。
+8. **HTML 实体检查**:标题/summary/meta 的**HTML 解码后值应与预期原文一致**——不列实体黑名单
+   (&quot;/&#39; 只是常见样本,黑名单永远漏),解码比对一步到位。
+9. **缓存验证口径**:整页缓存黏且忽略 `?cb=`,肉眼验证须加 `?preview_theme_id=<LIVE_THEME_ID>`;
+   注意它只是**这条 URL** 绕过缓存,不代表全站缓存已清,给用户的链接生效要等缓存自然过期。
+10. 发布后:GSC 对文章 URL 请求编入索引;
+11. 一周后回看 GA4(pagePath 含 /blogs/guides/):浏览量、人均停留——停留 <15s 说明首屏没钩住,回炉。
+
+## 环境备忘
+- 泰语页面路径是市场化的 `/th-th/`(或英文-泰国 `/en-th/`),**裸 `/th/` 不是路由**(404 属正常,别当缺陷修)。
 
 ## 组合与相关
 
