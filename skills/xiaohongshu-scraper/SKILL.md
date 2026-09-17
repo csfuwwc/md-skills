@@ -61,6 +61,7 @@ The Base entrypoint uses a local platform lock at `/tmp/social-scraper-locks/xia
  "imageUrls": ["https://sns-webpic-qc.xhscdn.com/..."]}
 ```
 
+`authorId` / `authorName` / `authorUrl` identify the note author (userId is the stable key; profile URL is built from it).
 `imageUrls` takes the largest available rendition per image (`H5_DTL` > `H5_PRV`). The original
 is not reachable — stripping the processing parameters returns 403, and every downloadable
 rendition carries the Xiaohongshu watermark plus whatever caption the creator burned in. Treat

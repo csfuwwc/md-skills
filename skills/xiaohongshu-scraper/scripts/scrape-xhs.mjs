@@ -137,6 +137,10 @@ function toResultFromNote({ url, finalUrl, note }, options) {
     noteType: String(note.type || "").toLowerCase() === "video" ? "video" : "image",
     publishedAt: Number.isFinite(Number(note.time)) && Number(note.time) > 0 ? Number(note.time) : null,
     imageUrls: extractImageUrls(note),
+    // 作者:账号关联用。userId 是稳定主键,主页链接按它拼
+    authorId: (note.user && note.user.userId) || null,
+    authorName: (note.user && (note.user.nickname || note.user.nickName)) || null,
+    authorUrl: note.user && note.user.userId ? `https://www.xiaohongshu.com/user/profile/${note.user.userId}` : null,
   };
 }
 
