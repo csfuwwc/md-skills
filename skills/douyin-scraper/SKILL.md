@@ -1,8 +1,6 @@
 ---
 name: douyin-scraper
-category: 内容抓取
-short-description: 抖音链接抓正文/互动/视觉内容,回填飞书表
-description: Use when a user provides Douyin/抖音 links, v.douyin.com short links, asks to fetch 抖音 video text, likes, collections/favorites, video visual content, or wants to fill a Lark Base table from 抖音 links.
+description: 从抖音视频、图文及账号主页链接提取作品链接、文案、封面和互动数据，核验作者与作品ID，支持飞书多维表格回填及公开视频画面解析。适用于抖音链接抓取、主页作品收集与已有内容数据补齐。
 ---
 
 # Douyin Scraper
@@ -13,15 +11,37 @@ Use this skill for 抖音公开视频链接抓取和飞书 Base 回填. Default 
 
 ## Browser Profile
 
-Use the dedicated Douyin browser profile and CDP endpoint:
+Use the user's fixed MD-Browser Douyin configuration as the source of truth.
 
-- CDP URL: `http://[::1]:9222`
-- user-data-dir: `$HOME/Library/Application Support/Google/DouyinChrome`
-- launcher: `~/.agents/social-browser-profiles/launch-social-chrome.sh douyin`
+1. Read the current configuration through MD-Browser MCP and verify its label,
+   `userDataDir`, profile, CDP endpoint, and network route against the user's choice.
+2. Launch/connect through MD-Browser MCP; pass its exact returned endpoint to the
+   scraper. Do not replace `127.0.0.1` with `[::1]` or invent another directory/port.
+3. On a port conflict, inspect the listener and report the owning process. Do not
+   switch ports/profiles or terminate the daily browser without specific approval.
+4. Keep the existing worker tab in the background; do not call `bring_to_front()`
+   or activate Chrome unless the user asks to watch or log in. A new browser or tab
+   may still become visible; do not promise zero focus changes without testing.
+5. Different profile directories have separate login state. Never import cookie
+   files into a live managed session or overwrite/migrate a profile implicitly.
 
-Do not use the default Chrome profile for Douyin scraping or commenting. Do not share this port/profile with Xiaohongshu or Weibo jobs.
+Do not use the daily Chrome profile for scraping. The examples below using a
+manually supplied profile are standalone fallbacks, not a replacement for an
+existing user-managed MD-Browser configuration. Only use them when explicitly chosen.
+
+## Homepage collection
+
+For `/user/<sec_uid>` collection or bulk enrichment, read
+[Homepage extraction rules](references/homepage-extraction.md) and use
+`scripts/scrape-profile.py`. It requires an existing browser endpoint, performs
+bounded background collection, and writes a local report without changing Base.
+Video display covers use `video.cover` before `video.origin_cover`; every cover
+includes its source and fallback/verification state. Never substitute an animated
+cover silently. Homepage records are not single-detail-page verification.
 
 ## Workflow
+
+In managed mode, set `DOUYIN_CDP_URL` to the exact endpoint returned by MD-Browser.
 
 1. Extract canonical URLs from raw text, Markdown links, or Base cells.
 2. For one-off diagnostics, run:
@@ -49,7 +69,7 @@ Do not use the default Chrome profile for Douyin scraping or commenting. Do not 
 
 Do not wrap the scraper in a shell loop. Batch mode must reuse one browser context for the whole batch and should write each row back to Lark immediately after that row's scrape result is produced.
 When `--browser-confirm` is used, still run public access first; retry only the failed rows with the logged-in Chrome profile.
-For repeated visible-browser diagnostics or fallback, prefer a long-lived Chrome opened with remote debugging and pass `--cdp-url 'http://[::1]:9222'` plus `--cdp-only` when the user explicitly wants all rows to use that visible browser. Do not repeatedly open and close Chrome.
+For repeated visible-browser diagnostics or fallback, prefer a long-lived Chrome opened with remote debugging and pass `--cdp-url "$DOUYIN_CDP_URL"` plus `--cdp-only` when the user explicitly wants all rows to use that visible browser. Do not repeatedly open and close Chrome.
 
 Important: login state belongs to the Chrome profile that is open. A cookie file saved by another helper or a different `--user-data-dir` is not the same as the visible CDP browser profile. When using `--cdp-url`, do not inject saved cookie files into that browser context; trust the live profile's own cookies. If a new CDP profile is used, the user may need to log in there once, then keep that browser open.
 
@@ -89,7 +109,7 @@ node ~/.agents/skills/douyin-scraper/scripts/process-lark-douyin.mjs \
   --base-token <base_token> \
   --table-id <table_id> \
   --view-id <view_id> \
-  --cdp-url 'http://[::1]:9222' \
+  --cdp-url "$DOUYIN_CDP_URL" \
   --cdp-only \
   --new-tab \
   --worker-tab-name codex-douyin-worker \

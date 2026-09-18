@@ -8,7 +8,7 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 |-------|------|
 | [aihot](skills/aihot/) | 查 AI HOT 的中文 AI 资讯、热点与日报(公开只读 API,不凭记忆答新闻) |
 | [hot-topics](skills/hot-topics/) | 拉微博热搜和 B 站热门榜,喂选题 |
-| [douyin-scraper](skills/douyin-scraper/) | 抖音链接抓正文/互动/视觉内容,回填飞书表 |
+| [douyin-scraper](skills/douyin-scraper/) | 抓取抖音单条及主页作品，核验封面来源、作者与互动数据 |
 | [tikhub-query](skills/tikhub-query/) | 走公司内部计费网关查 TikTok 视频详情 |
 | [video-download](skills/video-download/) | 通用社媒视频下载(抖音/小红书/B站/TikTok/YouTube 等) |
 | [wechat-scraper](skills/wechat-scraper/) | 静态优先，网关和浏览器兜底抓取公众号正文与历史文章 |

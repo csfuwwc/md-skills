@@ -9,7 +9,7 @@
 2. Logged-in Chrome fallback.
    - Use only after user consent.
    - Reuse one persistent browser context for the whole batch.
-   - Use the dedicated Douyin browser profile: CDP `http://[::1]:9222`, user-data-dir `$HOME/Library/Application Support/Google/DouyinChrome`.
+   - Read and launch the fixed Douyin configuration through MD-Browser MCP; use its exact CDP endpoint and existing profile. Do not guess an address, create a different profile, or change a conflicting port. Explicit standalone choices may use the user-provided profile.
    - For repeated diagnostics, connect to an already-open Chrome over CDP and keep it open between links.
    - Use the same Chrome profile for login and scraping. A saved cookie file and a separate CDP `--user-data-dir` do not automatically share login state.
    - Keep batches small and delays human-paced.
@@ -75,3 +75,7 @@ Use frame analysis for first-scrape videos:
 7. Append the result under `【视频内容解析】`.
 
 Do not bind video analysis by comparing MiniMax output with the caption text. Douyin captions and video content can legitimately differ; the binding must come from current page URL/video id metadata.
+
+## Homepage collection
+
+Use [homepage-extraction.md](homepage-extraction.md) and `scripts/scrape-profile.py` for author homepage lists. Prefer display `video.cover`, retain cover provenance, verify exact author/ID, preserve missing metrics, and report pagination completeness separately from a requested target set. Do not apply the legacy Base status names to a table with a different schema.
