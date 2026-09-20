@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from profile_data import extract_profile_records
+from cover_quality import upgrade_cover
 
 
 def timestamp():
@@ -120,6 +121,14 @@ async def collect(args):
                 report['stopReason'] == 'post_api_reached_end'
                 and not any('errorType' in r for r in report['responses']))
             report['targetCoverageComplete'] = wanted.issubset(records) if wanted is not None else None
+            # Finish browser collection before bounded CDN probes. Never continue after warning.
+            if report['stopReason'] not in ('platform_warning', 'browser_error', 'browser_or_page_closed'):
+                for aid, record in list(records.items()):
+                    records[aid] = await asyncio.to_thread(upgrade_cover, record)
+                    save()
+                report['coverQualityChecked'] = True
+            else:
+                report['coverQualityChecked'] = False
             report['finishedAt'] = timestamp()
             save()
         # Disconnect only: never close the user's browser/context/worker tab.

@@ -1,4 +1,5 @@
 """Normalize author-bound homepage responses without browser or Base side effects."""
+from cover_quality import cover_candidates
 
 METRICS = ('digg_count', 'comment_count', 'collect_count', 'share_count')
 
@@ -50,6 +51,7 @@ def extract_profile_records(payload, expected_sec_uid, collected_at, target_ids=
             'statistics': {key: statistics.get(key) for key in METRICS},
             'cover': cover, 'coverSource': source, 'coverFallback': fallback,
             'coverVerification': verification, 'collectedAt': collected_at,
+            'coverCandidates': cover_candidates(item.get('video') or {}) if not is_photo else [],
             'dataSource': 'profile_post_api',
         }
     return list(records.values())

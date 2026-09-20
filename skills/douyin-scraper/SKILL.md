@@ -35,9 +35,12 @@ For `/user/<sec_uid>` collection or bulk enrichment, read
 [Homepage extraction rules](references/homepage-extraction.md) and use
 `scripts/scrape-profile.py`. It requires an existing browser endpoint, performs
 bounded background collection, and writes a local report without changing Base.
-Video display covers use `video.cover` before `video.origin_cover`; every cover
-includes its source and fallback/verification state. Never substitute an animated
-cover silently. Homepage records are not single-detail-page verification.
+Video display covers use returned URLs for the same `video.cover.uri`, verify
+actual static-image dimensions, and prefer the largest verified candidate rather
+than the first thumbnail. Keep the original URL if probing fails; `origin_cover`
+is only an explicit missing-display fallback. See the reference for quality and
+provenance fields. Never substitute a different image or animated cover silently.
+Homepage records are not single-detail-page verification.
 
 ## Workflow
 
