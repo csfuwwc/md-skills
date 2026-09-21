@@ -22,6 +22,18 @@ class ProfileDataTests(unittest.TestCase):
             {'status_code': 0, 'aweme_list': items if items is not None else [self.item]},
             'author-a', '2026-01-01T00:00:00+08:00', **kw)
 
+    def test_video_quality_candidates_survive_profile_extraction(self):
+        self.item['video']['duration'] = 12000
+        self.item['video']['bit_rate'] = [
+            {'gear_name':'normal_720','bit_rate':2000000,'is_h265':0,
+             'play_addr':{'width':720,'height':1280,'data_size':3000,
+                          'url_list':['https://cdn.example/video.mp4']}}]
+        record = self.extract()[0]
+        self.assertEqual(record['video']['duration'],12000)
+        self.assertEqual(record['video']['bit_rate'][0]['play_addr']['url_list'],['https://cdn.example/video.mp4'])
+        self.assertEqual(record['videoQualities'][0]['width'],720)
+        self.assertNotIn('url_list',record['videoQualities'][0])
+
     def test_display_cover_wins_over_origin(self):
         r = self.extract()[0]
         self.assertEqual(r['cover'], 'https://cdn.example/display.jpg')
@@ -70,3 +82,11 @@ class ProfileDataTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class MaterialImagesTest(__import__('unittest').TestCase):
+    def test_all_note_images_preserve_order(self):
+        from profile_data import extract_profile_records
+        rows = extract_profile_records({'aweme_list': [{'aweme_id': '1', 'author': {'sec_uid': 'u'},
+            'images': [{'url_list': ['https://i/1.jpg']}, {'url_list': ['https://i/2.jpg']}]}]}, 'u', 'now')
+        self.assertEqual(rows[0]['imageUrls'], ['https://i/1.jpg', 'https://i/2.jpg'])
