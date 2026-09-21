@@ -591,6 +591,147 @@ def launch_browser_and_eval(page_url, js_code, wait_s=5, platform=None):
 
 # ── 抖音下载 ──────────────────────────────────────────────
 
+def douyin_video_candidates(video):
+    candidates = []
+    seen = set()
+    tiers = list(video.get('bit_rate') or [])
+    tiers += [{'play_addr':video.get(k) or {}, 'gear_name':k} for k in ('play_addr','play_addr_h264','play_addr_265','download_addr')]
+    for tier in tiers:
+        addr = tier.get('play_addr') or {}
+        urls = [u for u in addr.get('url_list',[]) if isinstance(u,str) and u.startswith('https://')]
+        if not urls:
+            continue
+        key = addr.get('url_key') or urls[0]
+        if key in seen:
+            continue
+        seen.add(key)
+        candidates.append({'width':addr.get('width',0),'height':addr.get('height',0),
+            'bit_rate':tier.get('bit_rate',0),'codec':'h265' if tier.get('is_h265') or '265' in tier.get('gear_name','') else 'h264',
+            'size':addr.get('data_size'),'gear':tier.get('gear_name'),'urls':urls})
+    return candidates
+
+
+def select_douyin_720(candidates):
+    def rank(c):
+        side = min(c['width'] or 0,c['height'] or 0)
+        return (side == 720, 0 < side <= 720, -abs(side - 720), c['codec'] == 'h264', c['bit_rate'] or 0)
+    if not candidates:
+        raise RuntimeError('目标作品没有视频候选')
+    return max(candidates, key=rank)
+
+
+def douyin_cdp_metadata(detail, target_id, expected_author=None):
+    if str(detail.get('aweme_id')) != target_id:
+        raise RuntimeError('抖音作品 ID 不匹配')
+    author = detail.get('author') or {}
+    author_id = author.get('sec_uid') or author.get('uid')
+    if not author_id or (expected_author and author_id != expected_author):
+        raise RuntimeError('抖音作者 ID 缺失或不匹配')
+    video = detail.get('video') or {}
+    candidates = douyin_video_candidates(video)
+    selected = select_douyin_720(candidates)
+    duration = float(video.get('duration') or 0) / 1000
+    if duration <= 0:
+        raise RuntimeError('目标作品缺少视频时长')
+    return {'video_id': target_id, 'author_id': author_id,
+            'author_name': author.get('nickname'), 'caption': detail.get('desc'),
+            'duration': duration, 'url': selected['urls'][0],
+            'selected_quality': {k:v for k,v in selected.items() if k != 'urls'},
+            'video_candidates': [{k:v for k,v in c.items() if k != 'urls'} for c in candidates],
+            'detail_updates': {k:detail[k] for k in ('desc','statistics','create_time','video') if k in detail}}
+
+
+def download_douyin_cdp(url, output_name, endpoint):
+    from playwright.sync_api import sync_playwright
+    target_id = re.search(r'/video/(\d+)', url).group(1)
+    expected_author = os.environ.get('VIDEO_DOWNLOAD_DOUYIN_AUTHOR_ID')
+    details = []
+    responses = []
+
+    def collect(node):
+        if isinstance(node, dict):
+            if str(node.get('aweme_id')) == target_id and node.get('video'):
+                details.append(node)
+            else:
+                for value in node.values():
+                    collect(value)
+        elif isinstance(node, list):
+            for value in node:
+                collect(value)
+
+    def on_finished(request):
+        if 'douyin.com/aweme/' in request.url:
+            responses.append(request)
+
+    print('[2/4] 连接指定抖音 CDP，核验目标作品...')
+    with sync_playwright() as p:
+        browser = p.chromium.connect_over_cdp(endpoint, timeout=15000)
+        if not browser.contexts:
+            raise RuntimeError('CDP 没有现有浏览器环境')
+        page = browser.contexts[0].new_page()
+        try:
+            page.on('requestfinished', on_finished)
+            page.goto(url, wait_until='domcontentloaded', timeout=45000)
+            for _ in range(40):
+                warning_lines = page.evaluate("() => (document.body?.innerText || '').split('\\n').filter(s => /验证码|异常访问|访问过于频繁|安全验证|拖动滑块|完成验证/.test(s)).map(s => s.slice(0, 240)).slice(0, 8)")
+                if warning_lines:
+                    evidence = os.path.join(output_dir(), 'platform-warning')
+                    with open(evidence + '.json', 'w', encoding='utf-8') as handle:
+                        json.dump({'video_id': target_id, 'source_url': url, 'matched_lines': warning_lines,
+                                   'observed_at': datetime.now().astimezone().isoformat()}, handle, ensure_ascii=False, indent=2)
+                    page.screenshot(path=evidence + '.png')
+                    raise RuntimeError('platform_warning: 停止下载，不回退其他路径')
+                while responses and not details:
+                    try:
+                        collect(responses.pop(0).response().json())
+                    except Exception:
+                        pass
+                if details:
+                    break
+                page.wait_for_timeout(500)
+            if not details:
+                raise RuntimeError('未获得目标作品详情，请检查 9222 登录或验证状态；不回退无头下载')
+            meta = douyin_cdp_metadata(details[0], target_id, expected_author)
+            output_path = os.path.join(output_dir(), output_name or f'douyin_{target_id}.mp4')
+            print('[3/4] 已核验作品和作者，下载对应媒体...')
+            download_file(meta.pop('url'), output_path, 'https://www.douyin.com/')
+            validate_video_file(output_path)
+            actual = get_media_duration_seconds(output_path)
+            if actual is None or abs(actual - meta['duration']) > max(1, meta['duration'] * .05):
+                raise RuntimeError('下载文件时长与目标作品不匹配')
+            meta['detail_updates']['observed_at'] = datetime.now().astimezone().isoformat()
+            meta['detail_updates']['video'] = {'cover': (details[0].get('video') or {}).get('cover')}
+            meta.update(platform='douyin', source='cdp', actual_duration=actual,
+                        source_url=url, expected_author_id=expected_author, validation='passed')
+            with open(output_path + '.meta.json', 'w', encoding='utf-8') as f:
+                json.dump(meta, f, ensure_ascii=False, indent=2)
+            print(f'[4/4] 下载及校验完成: {output_path}')
+            return output_path
+        finally:
+            page.remove_listener('requestfinished', on_finished)
+            page.close()
+
+
+def download_douyin_list(source_path, target_id, output_name):
+    record = json.loads(open(source_path, encoding='utf-8').read())
+    if record.get('dataSource') != 'profile_post_api':
+        raise RuntimeError('列表素材来源未核验')
+    detail = {'aweme_id':str(record.get('id')), 'author':{'sec_uid':record.get('authorSecUid')},
+              'desc':record.get('caption'),'video':record.get('video') or {}}
+    meta = douyin_cdp_metadata(detail,target_id,os.environ.get('VIDEO_DOWNLOAD_DOUYIN_AUTHOR_ID'))
+    output_path = os.path.join(output_dir(), output_name or f'douyin_{target_id}.mp4')
+    download_file(meta.pop('url'),output_path,'https://www.douyin.com/')
+    validate_video_file(output_path)
+    actual = get_media_duration_seconds(output_path)
+    if actual is None or abs(actual-meta['duration']) > max(1,meta['duration']*.05):
+        raise RuntimeError('列表视频时长校验失败')
+    meta.pop('detail_updates',None)
+    meta.update(platform='douyin',source='profile_post_api',actual_duration=actual,validation='passed')
+    with open(output_path+'.meta.json','w',encoding='utf-8') as f:
+        json.dump(meta,f,ensure_ascii=False,indent=2)
+    return output_path
+
+
 def download_douyin(url, output_name=None):
     print(f"[1/4] 解析抖音链接: {url}")
 
@@ -606,6 +747,15 @@ def download_douyin(url, output_name=None):
         video_id = m.group(1)
 
     page_url = f"https://www.douyin.com/video/{video_id}"
+    endpoint = os.environ.get('VIDEO_DOWNLOAD_DOUYIN_CDP_ENDPOINT')
+    if endpoint:
+        source_path = os.environ.get('VIDEO_DOWNLOAD_DOUYIN_LIST_RECORD')
+        if source_path:
+            try:
+                return download_douyin_list(source_path,video_id,output_name)
+            except Exception as exc:
+                print(f'列表下载未完成({type(exc).__name__})，转详情核验')
+        return download_douyin_cdp(page_url, output_name, endpoint)
     print(f"[2/4] 视频ID: {video_id}, 启动无头浏览器...")
 
     def is_douyin_video(resp):

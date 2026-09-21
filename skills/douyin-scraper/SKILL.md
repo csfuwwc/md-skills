@@ -9,6 +9,10 @@ description: 从抖音视频、图文及账号主页链接提取作品链接、�
 
 Use this skill for 抖音公开视频链接抓取和飞书 Base 回填. Default to public, non-logged-in access. Use a logged-in Chrome profile only as a low-frequency fallback after user consent.
 
+## 完整处理工作流
+
+账号检测新增、指定作品补采和下游归档处理时，阅读 [列表媒体与下游工作流](references/material-factory-workflow.md)。主页采集仍只输出报告；视频下载复用 video-download。归档、分析、产品匹配和业务表回填由调用方实现，不隐式上传或修改业务数据。
+
 ## Browser Profile
 
 Use the user's fixed MD-Browser Douyin configuration as the source of truth.

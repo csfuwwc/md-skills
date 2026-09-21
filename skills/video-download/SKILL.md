@@ -193,6 +193,12 @@ Cookie 保存在 `~/.config/video-download/<平台>_cookies.json`，自动检测
 
 支持的平台: `bilibili` / `douyin` / `xiaohongshu`
 
+## 抖音既有 CDP 环境
+
+已有抖音浏览器环境时，显式设置 `VIDEO_DOWNLOAD_DOUYIN_CDP_ENDPOINT=http://127.0.0.1:9222`，仍使用 `scripts/download.py` 下载入口。已知作者时设置 `VIDEO_DOWNLOAD_DOUYIN_AUTHOR_ID` 为账号的 sec_uid。端点应以 MD-Browser 原有配置为准。
+
+此模式仅连接现有环境、打开并关闭本次任务页，不导入 Cookie，不启动无头浏览器；连接或作品校验失败直接报错，不回退其他下载路径。从与目标 aweme_id 对应的详情取得媒体地址，校验作者、视频轨及时长，成功后生成 `.mp4.meta.json`，不保存视频临时 CDN 地址或 Cookie；详情封面地址供调用方及时归档。
+
 ## 依赖安装
 
 ```bash
@@ -217,3 +223,7 @@ brew install yt-dlp   # B站、抖音/小红书兜底及通用站点需要
 | 视频号提示未配置解析器 | 设置 `WECHAT_CHANNELS_RESOLVER_URL` |
 | 视频号解析失败/登录过期 | 在解析器服务端更新元宝登录 Cookie，不要把 Cookie 传给 Skill |
 | 视频号返回加密流 | 让解析器返回已解密代理 URL；Skill 不复制受限项目的解密代码 |
+
+## 抖音素材工厂列表优先下载
+
+调用方可设置 `VIDEO_DOWNLOAD_DOUYIN_LIST_RECORD` 为已核验的主页记录JSON，配合管理器返回的既有CDP endpoint和预期作者ID。优先下载列表中720p候选，失败再访问详情；实际选择及全部候选摘要写入meta。详情返回的新字段通过detail_updates交给调用方覆盖当前值。无参数时保留作品链接入口。清晰度选择与归档规则见douyin-scraper的素材工厂完整流程。
