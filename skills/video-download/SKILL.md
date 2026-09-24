@@ -131,11 +131,12 @@ python3 ./scripts/download.py "https://weixin.qq.com/sph/ARebDCbPGy" "video.mp4"
 脚本会优先尝试连接以下 CDP 端口抓取 `video/mp4` 响应体：
 1. `VIDEO_DOWNLOAD_TIKTOK_CDP_ENDPOINT`（如果设置）
 2. `http://127.0.0.1:9225`
-3. `http://127.0.0.1:9222`
 
 端口约定（团队规则）：
 - 在 TikTok 批处理任务中，如果显式设置了 `VIDEO_DOWNLOAD_TIKTOK_CDP_ENDPOINT`，应把它视为唯一目标端口（例如 `9225`），不应在任务层再切换到其他端口进行重试。
 - 当前团队默认 TikTok 端口为 `http://127.0.0.1:9225`。
+- TikTok 任务不回退到 `9222`，避免串到其他平台的浏览器。
+- 账号主页批处理可设置 `VIDEO_DOWNLOAD_TIKTOK_LIST_RECORD` 和 `VIDEO_DOWNLOAD_TIKTOK_AUTHOR_HANDLE`，通过 9225 浏览器上下文携带 Cookie 请求已核验列表记录里的 `playAddr`，但不导航到作品详情页。设置 `VIDEO_DOWNLOAD_TIKTOK_LIST_ONLY=1` 后，直链失败会留待重试，不进入作品详情页。
 
 若 CDP 抓取失败，会自动尝试 `tikwm` 解析；若仍失败，再按环境变量决定是否回退 `yt-dlp`。
 
