@@ -18,6 +18,12 @@ class CDPTests(unittest.TestCase):
   self.assertEqual(r['duration'],21);self.assertEqual(r['url'],'https://example.com/video')
 
 class QualityTests(unittest.TestCase):
+ def test_playback_preferred_over_misleading_download_dimensions(self):
+  video={'play_addr':{'width':576,'height':1250,'url_list':['https://example.com/play']},'download_addr':{'width':720,'height':720,'url_list':['https://example.com/download']}}
+  candidates=dl.douyin_video_candidates(video)
+  self.assertEqual(dl.select_douyin_720(candidates)['gear'],'play_addr')
+  self.assertEqual(len(candidates),2)
+
  def test_720_default_with_all_alternatives_retained(self):
   tiers=[{'bit_rate':b,'play_addr':{'width':w,'height':h,'url_list':['https://example.com/'+str(w)]}} for w,h,b in [(1080,1920,3000000),(720,1280,2000000),(576,1024,1000000)]]
   r=dl.douyin_cdp_metadata({'aweme_id':'1','author':{'sec_uid':'a'},'video':{'duration':1000,'bit_rate':tiers}},'1','a')

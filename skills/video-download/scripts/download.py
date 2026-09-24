@@ -34,6 +34,27 @@ COOKIE_DIR = os.path.expanduser('~/.config/video-download')
 
 # ── Cookie 管理 ─────────────────────────────────────────
 
+PLATFORM_WARNING_SCRIPT = r"""() => {
+ const visible = el => {
+   const r=el.getBoundingClientRect(), s=getComputedStyle(el);
+   return r.width>0 && r.height>0 && s.display!=='none' && s.visibility!=='hidden' && Number(s.opacity)!==0;
+ };
+ const evidence=[];
+ for(const el of document.querySelectorAll('iframe[src*="/captcha/"],#captcha_container,[class*="captcha_verify"],[class*="verify-wrap"]')) {
+   if(visible(el)) evidence.push('可见验证组件: '+el.tagName+' '+el.id+' '+String(el.className).slice(0,80));
+ }
+ const instruction=/^(?:请完成(?:下方|以下)?(?:安全)?验证(?:后继续)?|请(?:按住并)?拖动滑块.*|拖动滑块.*|访问过于频繁[，,。！!]?.*|异常访问[，,。！!]?.*)$/;
+ for(const el of document.querySelectorAll('body *')) {
+   if(el.children.length || !visible(el)) continue;
+   const text=(el.innerText||'').trim();
+   if(!text || text.length>100) continue;
+   const dialog=el.closest('[role="dialog"],[role="alert"],[aria-modal="true"]');
+   if(instruction.test(text) || (dialog && /^(安全验证|验证码|完成验证)$/.test(text))) evidence.push(text);
+ }
+ return [...new Set(evidence)].slice(0,8);
+}"""
+
+
 def get_cookie_path(platform):
     """获取平台 cookie 文件路径"""
     return os.path.join(COOKIE_DIR, f'{platform}_cookies.json')
@@ -612,6 +633,9 @@ def douyin_video_candidates(video):
 
 
 def select_douyin_720(candidates):
+    # download_addr may advertise placeholder dimensions and contain an appended outro.
+    playback = [c for c in candidates if c.get("gear") != "download_addr"]
+    candidates = playback or candidates
     def rank(c):
         side = min(c['width'] or 0,c['height'] or 0)
         return (side == 720, 0 < side <= 720, -abs(side - 720), c['codec'] == 'h264', c['bit_rate'] or 0)
@@ -673,7 +697,7 @@ def download_douyin_cdp(url, output_name, endpoint):
             page.on('requestfinished', on_finished)
             page.goto(url, wait_until='domcontentloaded', timeout=45000)
             for _ in range(40):
-                warning_lines = page.evaluate("() => (document.body?.innerText || '').split('\\n').filter(s => /验证码|异常访问|访问过于频繁|安全验证|拖动滑块|完成验证/.test(s)).map(s => s.slice(0, 240)).slice(0, 8)")
+                warning_lines = page.evaluate(PLATFORM_WARNING_SCRIPT)
                 if warning_lines:
                     evidence = os.path.join(output_dir(), 'platform-warning')
                     with open(evidence + '.json', 'w', encoding='utf-8') as handle:
@@ -754,6 +778,8 @@ def download_douyin(url, output_name=None):
             try:
                 return download_douyin_list(source_path,video_id,output_name)
             except Exception as exc:
+                if os.environ.get('VIDEO_DOWNLOAD_DOUYIN_LIST_ONLY') == '1':
+                    raise RuntimeError(f'列表直链下载失败，已禁止并发任务转入详情页: {type(exc).__name__}') from exc
                 print(f'列表下载未完成({type(exc).__name__})，转详情核验')
         return download_douyin_cdp(page_url, output_name, endpoint)
     print(f"[2/4] 视频ID: {video_id}, 启动无头浏览器...")

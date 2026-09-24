@@ -12,6 +12,27 @@ from profile_data import extract_profile_records
 from cover_quality import upgrade_cover
 
 
+PLATFORM_WARNING_SCRIPT = r"""() => {
+ const visible = el => {
+   const r=el.getBoundingClientRect(), s=getComputedStyle(el);
+   return r.width>0 && r.height>0 && s.display!=='none' && s.visibility!=='hidden' && Number(s.opacity)!==0;
+ };
+ const evidence=[];
+ for(const el of document.querySelectorAll('iframe[src*="/captcha/"],#captcha_container,[class*="captcha_verify"],[class*="verify-wrap"]')) {
+   if(visible(el)) evidence.push('可见验证组件: '+el.tagName+' '+el.id+' '+String(el.className).slice(0,80));
+ }
+ const instruction=/^(?:请完成(?:下方|以下)?(?:安全)?验证(?:后继续)?|请(?:按住并)?拖动滑块.*|拖动滑块.*|访问过于频繁[，,。！!]?.*|异常访问[，,。！!]?.*)$/;
+ for(const el of document.querySelectorAll('body *')) {
+   if(el.children.length || !visible(el)) continue;
+   const text=(el.innerText||'').trim();
+   if(!text || text.length>100) continue;
+   const dialog=el.closest('[role="dialog"],[role="alert"],[aria-modal="true"]');
+   if(instruction.test(text) || (dialog && /^(安全验证|验证码|完成验证)$/.test(text))) evidence.push(text);
+ }
+ return [...new Set(evidence)].slice(0,8);
+}"""
+
+
 def timestamp():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
@@ -24,6 +45,9 @@ async def collect(args):
         wanted = set(json.loads(Path(args.target_ids).read_text()))
         if not wanted or not all(isinstance(x, str) and x.isdigit() for x in wanted):
             raise ValueError('target-ids must be a nonempty JSON array of numeric ID strings')
+    known = set(json.loads(Path(args.known_ids).read_text())) if args.known_ids else set()
+    if not all(isinstance(x, str) and x.isdigit() for x in known):
+        raise ValueError('known-ids must be a JSON array of numeric ID strings')
     records, pending = {}, set()
     report = {'profileUrl': args.profile_url, 'startedAt': timestamp(),
               'dataSource': 'profile_post_api', 'postApiComplete': False,
@@ -82,7 +106,7 @@ async def collect(args):
                     report['stopReason'] = 'browser_or_page_closed'
                     break
                 await page.wait_for_timeout(args.wait_ms)
-                warning = await page.evaluate("() => /验证码|异常访问|访问过于频繁|安全验证|拖动滑块|完成验证/.test(document.body?.innerText || '')")
+                warning = await page.evaluate(PLATFORM_WARNING_SCRIPT)
                 if warning:
                     report['stopReason'] = 'platform_warning'
                     break
@@ -122,10 +146,15 @@ async def collect(args):
                 and not any('errorType' in r for r in report['responses']))
             report['targetCoverageComplete'] = wanted.issubset(records) if wanted is not None else None
             # Finish browser collection before bounded CDN probes. Never continue after warning.
-            if report['stopReason'] not in ('platform_warning', 'browser_error', 'browser_or_page_closed'):
+            if args.skip_cover_quality:
+                report['coverQualityChecked'] = False
+                report['coverQualitySkippedByRequest'] = True
+            elif report['stopReason'] not in ('platform_warning', 'browser_error', 'browser_or_page_closed'):
                 for aid, record in list(records.items()):
-                    records[aid] = await asyncio.to_thread(upgrade_cover, record)
-                    save()
+                    if aid not in known:
+                        records[aid] = await asyncio.to_thread(upgrade_cover, record)
+                        save()
+                report['coverQualitySkippedKnown'] = len(set(records) & known)
                 report['coverQualityChecked'] = True
             else:
                 report['coverQualityChecked'] = False
@@ -142,6 +171,8 @@ def main():
     parser.add_argument('--profile-url', required=True)
     parser.add_argument('--output', required=True)
     parser.add_argument('--target-ids', help='Optional JSON array of existing platform ID strings')
+    parser.add_argument('--known-ids', help='Optional JSON array of already known platform IDs; skip their cover checks')
+    parser.add_argument('--skip-cover-quality', action='store_true', help='Return bound API media without per-item CDN cover probes')
     parser.add_argument('--worker-tab-name', default='codex-douyin-worker')
     parser.add_argument('--max-scrolls', type=int, default=12)
     parser.add_argument('--wait-ms', type=int, default=4500)
