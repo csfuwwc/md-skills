@@ -55,7 +55,7 @@ def extract_profile_records(payload, expected_sec_uid, collected_at, target_ids=
             'imageUrls': [url for image in (item.get('images') or [])
                           if (url := https_image(image))] if is_photo else [],
             'video': {k:v for k,v in (item.get('video') or {}).items() if k in ('duration','play_addr','play_addr_h264','play_addr_265','download_addr','bit_rate')} if not is_photo else {},
-            'videoQualities': [{'gear':t.get('gear_name'),'width':(t.get('play_addr') or {}).get('width'),'height':(t.get('play_addr') or {}).get('height'),'bitRate':t.get('bit_rate'),'isH265':t.get('is_h265'),'size':(t.get('play_addr') or {}).get('data_size')} for t in (item.get('video') or {}).get('bit_rate',[])],
+            'videoQualities': [{'gear':t.get('gear_name'),'width':(t.get('play_addr') or {}).get('width'),'height':(t.get('play_addr') or {}).get('height'),'bitRate':t.get('bit_rate'),'isH265':t.get('is_h265'),'size':(t.get('play_addr') or {}).get('data_size')} for t in ((item.get('video') or {}).get('bit_rate') or [])],
             'dataSource': 'profile_post_api',
         }
     return list(records.values())

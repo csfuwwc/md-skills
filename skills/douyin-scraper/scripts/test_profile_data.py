@@ -22,6 +22,10 @@ class ProfileDataTests(unittest.TestCase):
             {'status_code': 0, 'aweme_list': items if items is not None else [self.item]},
             'author-a', '2026-01-01T00:00:00+08:00', **kw)
 
+    def test_null_bitrate_keeps_record(self):
+        self.item["video"]["bit_rate"] = None
+        self.assertEqual(self.extract()[0]["videoQualities"], [])
+
     def test_video_quality_candidates_survive_profile_extraction(self):
         self.item['video']['duration'] = 12000
         self.item['video']['bit_rate'] = [
@@ -78,7 +82,6 @@ class ProfileDataTests(unittest.TestCase):
     def test_empty_author_cannot_disable_binding(self):
         with self.assertRaises(ValueError):
             self.m.extract_profile_records({'aweme_list': [self.item]}, '', 'now')
-
 
 if __name__ == '__main__':
     unittest.main()
