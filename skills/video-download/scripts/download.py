@@ -799,6 +799,62 @@ def download_bilibili(url, output_name=None):
 
 # ── TikTok 下载（CDP 优先，失败回退 yt-dlp） ────────────────
 
+def download_tiktok_media_with_cdp(media_url, output_path, endpoint):
+    """Fetch a signed homepage media URL with the dedicated browser's cookies, without navigation."""
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as p:
+        browser = p.chromium.connect_over_cdp(endpoint, timeout=15000)
+        if not browser.contexts:
+            raise RuntimeError('TikTok CDP 未发现可用浏览器上下文')
+        response = browser.contexts[0].request.get(
+            media_url, headers={'Referer': 'https://www.tiktok.com/', 'Range': 'bytes=0-'},
+            timeout=90000)
+        content_type = (response.headers.get('content-type') or '').lower()
+        if response.status not in (200, 206) or 'video' not in content_type:
+            raise RuntimeError(f'TikTok 列表媒体请求失败: HTTP {response.status}')
+        body = response.body()
+        if not body:
+            raise RuntimeError('TikTok 列表媒体响应为空')
+        with open(output_path, 'wb') as f:
+            f.write(body)
+    return len(body)
+
+def download_tiktok_list(source_path, target_id, output_name=None):
+    """Download the author-bound media candidate returned by the homepage list API."""
+    with open(source_path, encoding='utf-8') as f:
+        record = json.load(f)
+    if record.get('dataSource') != 'profile_item_list_api' or record.get('type') != 'video':
+        raise RuntimeError('TikTok 列表素材来源或类型未核验')
+    if str(record.get('id') or '') != str(target_id):
+        raise RuntimeError('TikTok 列表作品 ID 不匹配')
+    expected_author = os.environ.get('VIDEO_DOWNLOAD_TIKTOK_AUTHOR_HANDLE', '').lstrip('@').casefold()
+    actual_author = str(record.get('authorHandle') or '').lstrip('@')
+    if not actual_author or (expected_author and actual_author.casefold() != expected_author):
+        raise RuntimeError('TikTok 列表作者不匹配')
+    video = record.get('video') or {}
+    media_url = video.get('playAddr')
+    duration = video.get('duration')
+    if not isinstance(media_url, str) or not media_url.startswith('https://'):
+        raise RuntimeError('TikTok 列表未返回可用视频地址')
+    output_path = os.path.join(output_dir(), output_name or f'tiktok_{target_id}.mp4')
+    endpoint = os.environ.get('VIDEO_DOWNLOAD_TIKTOK_CDP_ENDPOINT', '').strip() or 'http://127.0.0.1:9225'
+    download_tiktok_media_with_cdp(media_url, output_path, endpoint)
+    validate_video_file(output_path)
+    actual_duration = get_media_duration_seconds(output_path)
+    duration_ok = None
+    if duration and actual_duration:
+        duration_ok = abs(float(actual_duration) - float(duration)) <= 3
+        if not duration_ok:
+            raise RuntimeError('TikTok 列表视频时长校验失败')
+    write_tiktok_meta(
+        output_path=output_path, source='profile_item_list_api',
+        target_video_id=str(target_id), resolved_video_id=str(target_id),
+        expected_duration=duration, actual_duration=actual_duration,
+        validation={'id_ok': True, 'duration_ok': duration_ok, 'video_track_ok': True},
+        note='author-bound homepage list media',
+    )
+    return output_path
+
 def download_tiktok_cdp(url, output_name=None):
     """通过已登录的真实浏览器 CDP 抓取 TikTok 视频（活动 tab、先播放、强校验）。"""
     from playwright.sync_api import sync_playwright
@@ -807,15 +863,11 @@ def download_tiktok_cdp(url, output_name=None):
     m_expected = re.search(r'/video/(\d+)', url)
     expected_vid = m_expected.group(1) if m_expected else None
 
-    cdp_endpoints = []
     env_endpoint = os.environ.get('VIDEO_DOWNLOAD_TIKTOK_CDP_ENDPOINT', '').strip()
     if env_endpoint:
-        cdp_endpoints.append(env_endpoint)
-    # 默认尝试 TikTok 专用端口，再尝试常见备用端口
-    cdp_endpoints.extend([
-        'http://127.0.0.1:9225',
-        'http://127.0.0.1:9222',
-    ])
+        cdp_endpoints = [env_endpoint]
+    else:
+        cdp_endpoints = ['http://127.0.0.1:9225']
 
     if 'vm.tiktok.com' in url or 'vt.tiktok.com' in url:
         try:
@@ -1154,6 +1206,15 @@ def download_tiktok_tikwm(url, output_name=None):
     return output_path
 
 def download_tiktok(url, output_name=None):
+    source_path = os.environ.get('VIDEO_DOWNLOAD_TIKTOK_LIST_RECORD')
+    target = re.search(r'/video/(\d+)', url)
+    if source_path and target:
+        try:
+            return download_tiktok_list(source_path, target.group(1), output_name)
+        except Exception as exc:
+            if os.environ.get('VIDEO_DOWNLOAD_TIKTOK_LIST_ONLY') == '1':
+                raise RuntimeError(f'列表直链下载失败，已禁止批处理任务进入详情页: {type(exc).__name__}') from exc
+            print(f'[TikTok] 列表下载未完成({type(exc).__name__})，转详情核验')
     disable_tikwm = os.environ.get('VIDEO_DOWNLOAD_TIKTOK_DISABLE_TIKWM', '').strip() == '1'
     attempts = []
     # 第一轮：主路径
