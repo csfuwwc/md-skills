@@ -11,6 +11,7 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | [douyin-scraper](skills/douyin-scraper/) | 抓取抖音单条及主页作品，核验封面来源、作者与互动数据 |
 | [tikhub-query](skills/tikhub-query/) | 走公司内部计费网关查 TikTok 视频详情 |
 | [video-download](skills/video-download/) | 通用社媒视频下载(抖音/小红书/B站/TikTok/YouTube 等) |
+| [slider-captcha](skills/slider-captcha/) | 自己账号登录遇到滑块拼图时，算出拖动距离并自动拖过去 |
 | [wechat-scraper](skills/wechat-scraper/) | 静态优先，网关和浏览器兜底抓取公众号正文与历史文章 |
 | [weibo-scraper](skills/weibo-scraper/) | 微博链接抓正文/互动/视觉内容,回填飞书表 |
 | [xiaohongshu-scraper](skills/xiaohongshu-scraper/) | 小红书笔记抓正文/互动/元数据,回填飞书表 |
@@ -59,7 +60,7 @@ npx skills add https://github.com/csfuwwc/md-skills --skill douyin-scraper
 自动安装到 `~/.cursor/skills/` 和 `~/.claude/skills/` 等目录，支持 [skills.sh](https://skills.sh/csfuwwc/md-skills/video-download) 生态。
 
 可替换 `--skill` 为以下任一值：
-`aihot` `hot-topics` `douyin-scraper` `tikhub-query` `video-download` `wechat-scraper` `weibo-scraper` `xiaohongshu-scraper` `bilibili-creator-finder` `feishu-cli-manager` `imap-smtp-email` `oss-upload` `humanizer` `humanizer-zh` `seedance-prompt` `funcinating-guides` `funcinating-news` `shopify` `skill-publisher` `skill-vetter` `lark-base-replica`
+`aihot` `hot-topics` `douyin-scraper` `tikhub-query` `video-download` `wechat-scraper` `weibo-scraper` `xiaohongshu-scraper` `bilibili-creator-finder` `feishu-cli-manager` `imap-smtp-email` `oss-upload` `slider-captcha` `humanizer` `humanizer-zh` `seedance-prompt` `funcinating-guides` `funcinating-news` `shopify` `skill-publisher` `skill-vetter` `lark-base-replica`
 `aihot` `bilibili-creator-finder` `douyin-scraper` `feishu-cli-manager` `funcinating-guides` `funcinating-news` `hot-topics` `humanizer` `humanizer-zh` `imap-smtp-email` `oss-upload` `seedance-prompt` `shopify` `skill-publisher` `skill-vetter` `tikhub-query` `video-download` `wechat-scraper` `weibo-scraper` `xiaohongshu-scraper`
 <!-- skill-names:end -->
 
