@@ -143,24 +143,32 @@ async def solve_with_retries(page, check, attempts=3, settle=6, preset="tencent"
     check 可以是普通函数或 async 函数,返回真表示验证已通过。
     返回 {"passed": bool, "tries": [...每次 solve_slider 的结果...]}。
     """
+    async def passed():
+        ok = check()
+        return (await ok) if asyncio.iscoroutine(ok) else ok
+
     tries = []
     for n in range(attempts):
         if n:
+            if await passed():  # 通过信号可能晚到:重试前再问一次,别去刷新已经消失的组件
+                return {"passed": True, "tries": tries}
             try:
                 await refresh(page, preset, selectors)
             except Exception:  # noqa: BLE001 —— 失败后组件有时自己换了图
                 await asyncio.sleep(2)
-        result = await solve_slider(page, preset, selectors, workdir, fallback_cmds, scale)
+        try:
+            result = await solve_slider(page, preset, selectors, workdir, fallback_cmds, scale)
+        except Exception as exc:  # noqa: BLE001 —— 记下来继续,别把前面的尝试记录一起丢掉
+            result = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
         tries.append(result)
         if not result.get("ok"):
+            if await passed():
+                return {"passed": True, "tries": tries}
             continue
         loop = asyncio.get_running_loop()
         deadline = loop.time() + settle
         while loop.time() < deadline:
-            ok = check()
-            if asyncio.iscoroutine(ok):
-                ok = await ok
-            if ok:
+            if await passed():
                 return {"passed": True, "tries": tries}
             await asyncio.sleep(0.5)
     return {"passed": False, "tries": tries}
