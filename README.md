@@ -23,11 +23,12 @@ Agent Skills 合集，支持 Cursor / Claude Code 及所有兼容 [Agent Skills 
 | [humanizer-zh](skills/humanizer-zh/) | 去除中文文本的 AI 味与翻译腔 |
 | [seedance-prompt](skills/seedance-prompt/) | 即梦 Seedance 2.0 视频脚本 Prompt 生成 |
 | [funcinating-guides](skills/funcinating-guides/) | 给范趣町 Shopify guides 写能带流量、能留人的长文指南 |
-| [funcinating-news](skills/funcinating-news/) | 给范趣町 Shopify news 写双语资讯：查证、双语、SEO、轮播与发布验收 |
+| [funcinating-news](skills/funcinating-news/) | 基于新闻线索或话题，为 Funcinating(范趣町) Shopify news 生成和维护事实扎实、中英双语、去 AI 味的资讯。适用于品牌动态、新建或修复已有 News。内置取现状、查证、起草、审稿、写入与验收流程，包含固定信源、五拍骨架、合规红线、SEO、多图轮播及逐语言逐图片 alt 发布检查。与 humanizer / humanizer-zh 组合使用。 |
 | [shopify](skills/shopify/) | 范趣町 Shopify 上架流水线：内容、多语言、区域定价、履约与上线验收 |
 | [skill-publisher](skills/skill-publisher/) | 将 ~/.agents/skills 中选定的 skill 直接发布到 GitHub 仓库，依次完成临时克隆、同步、提交、推送和自动清理。适用于“发布新 skill”、“同步更新 skill”、“按标记批量发布 skill”。支持 dry-run、按名称发布、按 .publish 标记发布、可选 prune。 |
 | [skill-vetter](skills/skill-vetter/) | 第三方 skill 安装前的安全审查与风险分级 |
 | [lark-base-replica](skills/lark-base-replica/) | 复刻或迁移当前用户可合法查看但无法直接复制的飞书多维表格到自己的 Base，包含表、字段、视图、支持的普通记录和可见附件。适用于完全复刻、复制、迁移、备份或重建外部多维表格；源表保持只读，写入前必须确认精确目标 Base。 |
+| [tiktok-scraper](skills/tiktok-scraper/) | 从 TikTok 账号主页抓取账号指标、作品列表、互动数据以及视频或图文素材候选。用于 TikTok 账号上新监测和已有内容数据补齐；固定使用 MD-Browser TikTok 的 9225 CDP，不进入作品详情页。 |
 
 ## 安装
 
@@ -60,7 +61,7 @@ npx skills add https://github.com/csfuwwc/md-skills --skill douyin-scraper
 自动安装到 `~/.cursor/skills/` 和 `~/.claude/skills/` 等目录，支持 [skills.sh](https://skills.sh/csfuwwc/md-skills/video-download) 生态。
 
 可替换 `--skill` 为以下任一值：
-`aihot` `hot-topics` `douyin-scraper` `tikhub-query` `video-download` `wechat-scraper` `weibo-scraper` `xiaohongshu-scraper` `bilibili-creator-finder` `feishu-cli-manager` `imap-smtp-email` `oss-upload` `slider-captcha` `humanizer` `humanizer-zh` `seedance-prompt` `funcinating-guides` `funcinating-news` `shopify` `skill-publisher` `skill-vetter` `lark-base-replica`
+`aihot` `hot-topics` `douyin-scraper` `tikhub-query` `video-download` `slider-captcha` `wechat-scraper` `weibo-scraper` `xiaohongshu-scraper` `bilibili-creator-finder` `feishu-cli-manager` `imap-smtp-email` `oss-upload` `humanizer` `humanizer-zh` `seedance-prompt` `funcinating-guides` `funcinating-news` `shopify` `skill-publisher` `skill-vetter` `lark-base-replica` `tiktok-scraper`
 `aihot` `bilibili-creator-finder` `douyin-scraper` `feishu-cli-manager` `funcinating-guides` `funcinating-news` `hot-topics` `humanizer` `humanizer-zh` `imap-smtp-email` `oss-upload` `seedance-prompt` `shopify` `skill-publisher` `skill-vetter` `tikhub-query` `video-download` `wechat-scraper` `weibo-scraper` `xiaohongshu-scraper`
 <!-- skill-names:end -->
 

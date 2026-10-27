@@ -1,18 +1,11 @@
 ---
 name: funcinating-news
-category: 范趣町业务
-short-description: 给范趣町 Shopify news 写双语资讯：查证、双语、SEO、轮播与发布验收
-description: |
-  基于某条新闻或话题，为 Funcinating(范趣町)Shopify news 博客生成一篇「事实扎实、
-  中英双语、去 AI 味、可直接发布」的资讯。适用于：定期外部搜索到品牌相关动态、或自己拟一个
-  话题时。内置六步流程(取现状→查证→骨架起草→去AI味→写入Shopify→验收)、固定信源清单、
-  五拍内容骨架、合规红线(绝不编造)、可选多图轮播，以及 Shopify 文章读写的确切 GraphQL 与坑位。
-  与 humanizer / humanizer-zh 组合使用。
+description: 基于新闻线索或话题，为 Funcinating(范趣町) Shopify news 生成和维护事实扎实、中英双语、去 AI 味的资讯。适用于品牌动态、新建或修复已有 News。内置取现状、查证、起草、审稿、写入与验收流程，包含固定信源、五拍骨架、合规红线、SEO、多图轮播及逐语言逐图片 alt 发布检查。与 humanizer / humanizer-zh 组合使用。
 license: MIT
 metadata:
   category: 范趣町业务
-  short-description: 给范趣町 Shopify news 写双语资讯，支持可选多图轮播
-  version: 1.2.3
+  short-description: 给范趣町 Shopify news 写双语资讯：查证、双语、SEO、轮播与发布验收
+  version: 1.2.4
   compatibility: any-agent
 ---
 
@@ -43,6 +36,10 @@ metadata:
 9. **时间分三类，默认业务时区固定为 GMT+8**。正文中的“事件时间”、Shopify 的“文章可见时间”和实际执行的“操作时间”必须分别记录，禁止互相覆盖。面向用户统一用 GMT+8 确认，写入 Shopify 前再转换为 UTC ISO 8601。用户只给日期、没有具体时间时必须询问，不能默认 00:00、12:00 或操作时间。“发布/上线”只表示允许公开，不表示授权改写已经确认的文章可见时间；若立即上线与已确认的未来时间冲突，先列出冲突并再次确认。
 
 ---
+
+## 图片 alt 发布硬闸
+
+新建、发布、换图或修改 alt 均须检查全部已发布目标语言，不得只验 EN / zh-CN。分别维护 ArticleImage 与各 MediaImage 的原生翻译；轮播另按 [多图轮播规范](references/multi-image-gallery.md) 同步 `custom.news_gallery_alt_i18n`。API 成功、`outdated:false`、本地预览或页面 HTTP 200 均不能代替真实页面逐图验证。任一目标语言真实图片 alt 缺失、错配或错误回退即失败；克隆图必须保持空 alt。未通过不得发布或宣称修复完成。
 
 ## 六步流程
 前三步是人的判断(查证+起草+审稿，不能省)，后三步是机械操作(可脚本化)。
@@ -115,7 +112,7 @@ mutation($id:ID!,$article:ArticleUpdateInput!){
 - 搜索引擎 listing 用 `metafieldsSet` 写 `global.title_tag` 和 `global.description_tag`，类型均为 `single_line_text_field`。新建时可传 `compareDigest:null`，避免意外覆盖并发创建的值。
 - 写完 SEO metafields 后重新查询文章的 `translatableContent`。Shopify 会暴露 `meta_title`、`meta_description` 及其 digest；把这两项与 `summary_html` 一起注册到 `zh-CN`。不要用正文回退值冒充独立 Meta Description。
 
-若用户要求两张或更多图片可滑动展示，先完整读取 [多图轮播规范](references/multi-image-gallery.md)，按其中的数据模型、主题交互、最小发布范围和验收清单执行。已有主题支持时只写当前文章的有序图片引用，不重复修改主题。
+若用户要求两张或更多图片可滑动展示，或正在维护已有轮播/修复其 alt，先完整读取 [多图轮播规范](references/multi-image-gallery.md)，按其中的数据模型、原生翻译与 alt 映射同步、主题交互、最小发布范围和验收清单执行。已有主题支持时只维护当前文章的有序图片引用、原生图片翻译和 alt 映射，不重复修改主题。单图仍须维护 ArticleImage 原生 alt 翻译并检查详情与列表，不强加 gallery 或映射。
 
 ZH 走 `translationsRegister`:
 ```
@@ -125,24 +122,25 @@ mutation($rid:ID!,$translations:[TranslationInput!]!){
 ```
 
 ### ⑥ 验收
-- ⚠️ **Shopify 整页缓存很黏、且忽略 `?cb=` 参数**：验证要用 `?preview_theme_id=<LIVE_THEME_ID>` 绕过缓存渲染。
+- ⚠️ **Shopify 整页缓存很黏、且可能忽略 `?cb=` 参数**：可用 `?preview_theme_id=<LIVE_THEME_ID>` 辅助检查；正式发布后必须再检查不含 preview 参数的公共 URL，不能只凭预览通过。
 - 回读 `article.author.name`，必须严格等于 `Funcinating Team`；不一致即验收失败，不得声称已完成或已上线。
 - 回读 `isPublished` 与 `publishedAt`，把 `publishedAt` 转回 GMT+8 后与用户确认的文章可见时间逐项比对到分钟。当前/过去时间应为公开状态；未来时间应保持排期状态。任何不一致都不得声称已发布或已排期。
 - grep 确认删掉的假信息 **0 残留**(标题/正文/摘要/图 alt/meta 都查)。
 - 回读 EN 与 zh-CN 的 `summary_html`、`meta_title`、`meta_description` 和 Tags；检查长度、列表实际展示的品牌/IP Tag、HTML 实体和页面 `<title>` / `<meta name="description">`。不得出现字面量 `&quot;`、`&#39;` 或从正文自动截出的超长描述。
+- 字数 200-500、**无 em-dash**、EN 和 zh-sg 两个 locale 都对、内链有效。
 - **SERP 标题与描述非空(机器查,零容忍)**:`global.title_tag` 与 `global.description_tag` 两个 metafield 都必须有值——空着 Google 就拿 H1 和正文猜(2026-09-01 全站扫描:guides 8 篇缺项,含停留最佳文两项全空;8-17 只体检了 news 导致漏网)。查法:
   ```
   { blogs(first:5){ nodes{ handle articles(first:60){ nodes{ handle
       tt:metafield(namespace:"global",key:"title_tag"){value}
       dd:metafield(namespace:"global",key:"description_tag"){value} } } } } }
   ```
-- 字数 200-500、**无 em-dash**、EN 和 zh-sg 两个 locale 都对、内链有效。
 - 多图稿还要按 [多图轮播规范](references/multi-image-gallery.md) 回读图片数量与顺序，并在真实页面验证悬停箭头、移动端滑动和首尾无缝循环。
+- **alt 验收必须留矩阵证据**：现查目标 locale 与真实 storefront 路由，记录每个 locale × 每张真实图片的 ID、预期 alt、原生翻译/映射值、实际 DOM alt 和通过状态；另查列表题图与克隆图。上线前在 Shopify 真实渲染中通过，上线后公共 URL 再通过。缺测、错误回退或不匹配均令验收脚本非零退出，不得降为 warning。若已公开才发现问题，如实报告“已公开但验收失败”，不得擅自下线或改发布时间。
 
 ---
 
 ## 环境备忘(会变的现查，别写死)
-- store：`qs0nxk-ft.myshopify.com`；`gql.mjs` 输出纯 JSON(无进度行无 ANSI),直接 `json.loads`。
+- store：`qs0nxk-ft.myshopify.com`；`gql.mjs` 输出纯 JSON(无进度行无 ANSI),直接 `json.loads`。该命令须在实际具备此路径和既有凭据的主机执行，先确认当前环境；不得为验收导出生产 Token。
 - news 博客 handle=`news`；ZH locale=`zh-CN`(对应 zh-sg storefront)。
 - LIVE_THEME_ID / 各 article GID：现查(`blogs`/`themes`)，不同环境不同。
 - 主题层 news 详情已是「左图右文」版式，正文放长内容没问题。
