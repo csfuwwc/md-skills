@@ -28,6 +28,8 @@ static parser
 
 Do not call the gateway or launch a browser after static extraction succeeds. This preserves independence from the VPS and avoids unnecessary network, CPU, memory, and latency.
 
+If DNS resolution or outbound networking fails in a restricted execution sandbox, do not immediately classify the article or gateway as unavailable. When permitted by the runtime, request the narrow network permission needed to retry the same static parser, then continue the sequence based on the retried result. If permission is denied or unavailable, report the network limitation. A browser site-safety denial is a separate restriction: stop and follow the tool's stated policy; do not use another path to evade it.
+
 ### 1. Static parser
 
 Run:
